@@ -1,0 +1,27 @@
+*, html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #111;
+}
+
+canvas {
+    /* Scale dynamically while keeping ratio */
+    width: min(100vw, calc(100vh * (15 / 13)));
+    height: auto;
+    aspect-ratio: 15 / 13;
+
+    background: #fff;
+
+    /* Prevent browser blurring on upscale */
+    image-rendering: pixelated;   /* Chrome, Edge, Safari */
+    image-rendering: crisp-edges; /* FF */
+}
