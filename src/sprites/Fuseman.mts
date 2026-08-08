@@ -52,26 +52,22 @@ export default class Fuseman extends Sprite {
 
             // Draw animated pose (shift up 16px for overdraw)
             switch (this.direction) {
-                case "up": {
+                case "up":
                     sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveUp[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveUp.length;
                     break;
-                }
-                case "down": {
+                case "down":
                     sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveDown[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveDown.length;
                     break;
-                }
-                case "right": {
+                case "right":
                     sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveRight[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveRight.length;
                     break;
-                }
-                case "left": {
+                case "left":
                     sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveLeft[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveLeft.length;
                     break;
-                }
             }
 
             // Draw frame
