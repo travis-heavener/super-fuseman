@@ -11,6 +11,15 @@ type FusemanSpriteMap = {
     "die": number[]
 };
 
+/**
+ * Tile spritesheet map
+ */
+type TileSpriteMap = {
+    "frames": ImageBitmap[],
+    "immutableTile": number,
+    "mutableTile": number
+};
+
 // Base path to resource files
 const resPath = "../../res";
 
@@ -19,9 +28,11 @@ const resPath = "../../res";
  */
 export default class Textures {
     fusers: FusemanSpriteMap[];
+    tiles: TileSpriteMap;
 
-    private constructor(fusers: FusemanSpriteMap[]) {
+    private constructor(fusers: FusemanSpriteMap[], tiles: TileSpriteMap) {
         this.fusers = fusers;
+        this.tiles = tiles;
     }
 
     /**
@@ -36,44 +47,62 @@ export default class Textures {
      */
     static async create() {
         // Load Fuseman spritesheet bitmap
-        const fusersSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/fuseman.png");
-
-        // Unpack fusers spritesheet
         const fusers = [] as FusemanSpriteMap[];
+        {
+            const fusersSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/fuseman.png");
 
-        // Iterate for each Fuseman
-        for (let i = 0; i < 5; ++i) {
-            // Piece apart individual frames
-            const y = i * 32;
-            const frames = [];
-            for (let j = 0; j < 12; ++j) {
-                frames.push( await createImageBitmap( fusersSpritesheet, j * 16, y, 16, 32 ) );
+            // Iterate for each Fuseman
+            for (let i = 0; i < 5; ++i) {
+                // Piece apart individual frames
+                const y = i * 32;
+                const frames = [];
+                for (let j = 0; j < 12; ++j) {
+                    frames.push( await createImageBitmap( fusersSpritesheet, j * 16, y, 16, 32 ) );
+                }
+
+                // Flip bitmap for left movement
+                frames.push(
+                    await Textures.createFlippedBitmap( fusersSpritesheet, 48, y, 16, 32 ),
+                    await Textures.createFlippedBitmap( fusersSpritesheet, 64, y, 16, 32 ),
+                    await Textures.createFlippedBitmap( fusersSpritesheet, 80, y, 16, 32 )
+                );
+
+                // Append FusemanSpriteMap
+                fusers.push({
+                    "frames": frames,
+                    "idle": 0,
+                    "moveDown": [0, 1, 0, 2],
+                    "moveRight": [3, 4, 3, 5],
+                    "moveUp": [6, 7, 6, 8],
+                    "die": [9, 10, 11],
+                    "moveLeft": [12, 13, 12, 14]
+                } as FusemanSpriteMap);
             }
 
-            // Flip bitmap for left movement
-            frames.push(
-                await Textures.createFlippedBitmap( fusersSpritesheet, 48, y, 16, 32 ),
-                await Textures.createFlippedBitmap( fusersSpritesheet, 64, y, 16, 32 ),
-                await Textures.createFlippedBitmap( fusersSpritesheet, 80, y, 16, 32 )
-            );
-
-            // Append FusemanSpriteMap
-            fusers.push({
-                "frames": frames,
-                "idle": 0,
-                "moveDown": [0, 1, 0, 2],
-                "moveRight": [3, 4, 3, 5],
-                "moveUp": [6, 7, 6, 8],
-                "die": [9, 10, 11],
-                "moveLeft": [12, 13, 12, 14]
-            } as FusemanSpriteMap);
+            // Free spritesheet
+            fusersSpritesheet.close();
         }
 
-        // Free spritesheet
-        fusersSpritesheet.close();
+        // Load tiles spritesheet bitmap
+        const tiles = {} as TileSpriteMap;
+        {
+            const tilesSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/tiles.png");
+            tiles.frames = [];
+
+            // Push mutable & immutable tiles
+            tiles.immutableTile = 0;
+            tiles.mutableTile = 1;
+            tiles.frames = [
+                await createImageBitmap( tilesSpritesheet,  0, 0, 16, 16 ), // Immutable tile
+                await createImageBitmap( tilesSpritesheet, 16, 0, 16, 16 )  // Mutable tile
+            ];
+
+            // Free spritesheet
+            tilesSpritesheet.close();
+        }
 
         // Create Textures
-        return new Textures(fusers);
+        return new Textures(fusers, tiles);
     }
 
     /**

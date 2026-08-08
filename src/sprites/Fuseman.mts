@@ -17,7 +17,7 @@ export default class Fuseman extends Sprite {
     isMoving: boolean;
 
     // The current animation frame index, resets to 0 when changing directions
-    animationFrameIndex: number;
+    animFrameIndex: number;
 
     // Timestamp of last animation frame update
     lastAnimationFrameTimestamp: number;
@@ -32,7 +32,7 @@ export default class Fuseman extends Sprite {
         this.direction = "down";
 
         // Reset animation flags
-        this.animationFrameIndex = this.lastAnimationFrameTimestamp = 0;
+        this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
         this.isMoving = false;
     }
 
@@ -47,22 +47,22 @@ export default class Fuseman extends Sprite {
             // Draw animated pose (shift up 16px for overdraw)
             switch (this.direction) {
                 case "up": {
-                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveUp[this.animationFrameIndex];
+                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveUp[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveUp.length;
                     break;
                 }
                 case "down": {
-                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveDown[this.animationFrameIndex];
+                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveDown[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveDown.length;
                     break;
                 }
                 case "right": {
-                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveRight[this.animationFrameIndex];
+                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveRight[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveRight.length;
                     break;
                 }
                 case "left": {
-                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveLeft[this.animationFrameIndex];
+                    sheetFrameIndex = textures.fusers[this.playerNumber - 1].moveLeft[this.animFrameIndex];
                     numFrames = textures.fusers[this.playerNumber - 1].moveLeft.length;
                     break;
                 }
@@ -73,7 +73,7 @@ export default class Fuseman extends Sprite {
 
             // Cycle to next animation frame, if needed
             if (Date.now() - this.lastAnimationFrameTimestamp > Consts.ANIMATION_FRAME_INTERVAL_MS) {
-                this.animationFrameIndex = (this.animationFrameIndex + 1) % numFrames;
+                this.animFrameIndex = (this.animFrameIndex + 1) % numFrames;
                 this.lastAnimationFrameTimestamp = Date.now();
             }
         } else {

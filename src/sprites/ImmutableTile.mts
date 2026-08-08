@@ -1,4 +1,4 @@
-import Textures from "../engine/Textures.mts";
+import Textures from "../engine/Textures.mjs";
 import Point2 from "../tools/Point2.mjs";
 import Tile from "./Tile.mjs";
 
@@ -11,6 +11,8 @@ export default class ImmutableTile extends Tile {
     }
 
     draw(ctx: CanvasRenderingContext2D, textures: Textures) {
-        throw new Error("TODO - ImmutableTile stub");
+        ctx.drawImage(
+            textures.tiles.frames[ textures.tiles.immutableTile ], this.pos.x, this.pos.y
+        );
     }
 };

@@ -10,5 +10,8 @@ export default Object.freeze({
     get HEIGHT_PX() { return this.TILES_DOWN_EXTERIOR * 16 },
 
     // Animation frame tick interval, in milliseconds
-    ANIMATION_FRAME_INTERVAL_MS: 120
+    ANIMATION_FRAME_INTERVAL_MS: 120,
+
+    // Background hex color code
+    BACKGROUND_HEX: "#107510"
 });
