@@ -36,7 +36,7 @@ export default class Textures {
      */
     static async create() {
         // Load Fuseman spritesheet bitmap
-        const fusersSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/fuseman.bmp");
+        const fusersSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/fuseman.png");
 
         // Unpack fusers spritesheet
         const fusers = [] as FusemanSpriteMap[];
