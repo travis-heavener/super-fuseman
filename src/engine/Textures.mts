@@ -16,8 +16,9 @@ type FusemanSpriteMap = {
  */
 type TileSpriteMap = {
     "frames": ImageBitmap[],
-    "immutableTile": number,
-    "mutableTile": number
+    "immutableTile": number[],
+    "mutableTile": number[],
+    "backgroundTile": number[]
 };
 
 // Base path to resource files
@@ -90,12 +91,22 @@ export default class Textures {
             tiles.frames = [];
 
             // Push mutable & immutable tiles
-            tiles.immutableTile = 0;
-            tiles.mutableTile = 1;
-            tiles.frames = [
-                await createImageBitmap( tilesSpritesheet,  0, 0, 16, 16 ), // Immutable tile
-                await createImageBitmap( tilesSpritesheet, 16, 0, 16, 16 )  // Mutable tile
-            ];
+            tiles.immutableTile = [];
+            tiles.mutableTile = [];
+            tiles.backgroundTile = [];
+
+            // For each theme...
+            for (let i = 0; i < 2; ++i) {
+                tiles.frames.push(
+                    await createImageBitmap( tilesSpritesheet, i * 16,  0, 16, 16 ), // Immutable tile
+                    await createImageBitmap( tilesSpritesheet, i * 16, 16, 16, 16 ), // Mutable tile
+                    await createImageBitmap( tilesSpritesheet, i * 16, 32, 16, 16 ), // Background tile
+                );
+
+                tiles.immutableTile.push(i * 3);
+                tiles.mutableTile.push(i * 3 + 1);
+                tiles.backgroundTile.push(i * 3 + 2);
+            }
 
             // Free spritesheet
             tilesSpritesheet.close();

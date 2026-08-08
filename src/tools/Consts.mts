@@ -12,6 +12,6 @@ export default Object.freeze({
     // Animation frame tick interval, in milliseconds
     ANIMATION_FRAME_INTERVAL_MS: 120,
 
-    // Background hex color code
-    BACKGROUND_HEX: "#107510"
+    // The number of themes available in the spritesheet
+    NUM_THEMES: 2
 });

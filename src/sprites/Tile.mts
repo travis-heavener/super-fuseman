@@ -7,7 +7,10 @@ import Sprite from "./Sprite.mjs";
  * Binds to the grid, and is either immutable or mutable (can be destroyed).
  */
 export default abstract class Tile extends Sprite {
-    constructor(pos: Point2) {
+    protected themeIndex: number;
+
+    constructor(pos: Point2, themeIndex: number) {
         super(pos);
+        this.themeIndex = themeIndex;
     }
 };
