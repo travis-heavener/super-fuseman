@@ -8,7 +8,8 @@ type FusemanSpriteMap = {
     "moveRight": number[],
     "moveLeft": number[],
     "moveUp": number[],
-    "die": number[]
+    "die": number[],
+    "shadow": number
 };
 
 /**
@@ -44,7 +45,8 @@ export default class Textures {
      * 3..5:   move right
      * 6..8:   move up
      * 9..11:  death animation
-     * 12..14: move left (not on spritesheet, just the 'move right' frames but flipped in memory)
+     * 12:     sprite shadow
+     * 13..15: move left (not on spritesheet, just the 'move right' frames but flipped in memory)
      */
     static async create() {
         // Load Fuseman spritesheet bitmap
@@ -57,7 +59,7 @@ export default class Textures {
                 // Piece apart individual frames
                 const y = i * 32;
                 const frames = [];
-                for (let j = 0; j < 12; ++j) {
+                for (let j = 0; j < 13; ++j) {
                     frames.push( await createImageBitmap( fusersSpritesheet, j * 16, y, 16, 32 ) );
                 }
 
@@ -76,7 +78,8 @@ export default class Textures {
                     "moveRight": [3, 4, 3, 5],
                     "moveUp": [6, 7, 6, 8],
                     "die": [9, 10, 11],
-                    "moveLeft": [12, 13, 12, 14]
+                    "shadow": 12,
+                    "moveLeft": [13, 14, 13, 15]
                 } as FusemanSpriteMap);
             }
 

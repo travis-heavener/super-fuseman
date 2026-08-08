@@ -40,6 +40,12 @@ export default class Fuseman extends Sprite {
      * Draws the Fuseman on the canvas.
      */
     draw(ctx: CanvasRenderingContext2D, textures: Textures) {
+        // Draw Fuseman's shadow
+        const shadowFrameIndex = textures.fusers[this.playerNumber - 1].shadow;
+        ctx.drawImage(
+            textures.fusers[this.playerNumber - 1].frames[ shadowFrameIndex ], this.pos.x, this.pos.y - 16
+        );
+
         if (this.isMoving) {
             let numFrames: number; // Total number of frames for this animation
             let sheetFrameIndex: number; // Current frame index from the array of frames on spritesheet
