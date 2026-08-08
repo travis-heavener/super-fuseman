@@ -103,8 +103,8 @@ export default class Renderer {
             }
         }
 
-        // Randomly remove between 3 and 7 mutable tiles
-        const numMutableTilesToRemove = Math.floor(Math.random() * 4) + 3;
+        // Randomly remove between 4 and 9 mutable tiles
+        const numMutableTilesToRemove = Math.floor(Math.random() * 5) + 4;
         for (let i = 0; i < numMutableTilesToRemove; ++i) {
             let x: number, y: number;
             do {
