@@ -1,12 +1,22 @@
-import Textures from "../engine/Textures.mjs";
 import Consts from "../tools/Consts.mjs";
 import Point2 from "../tools/Point2.mjs";
 import Sprite from "./Sprite.mjs";
+import Textures from "../engine/Textures.mjs";
+import Tickable from "./Tickable.mjs";
+
+/**
+ * Type wrapper for movement intent, determined before collision checks and is reset each tick
+ */
+type MovementIntent = {
+    direction: "left" | "right" | "up" | "down",
+    endPos: Point2,
+    isMoving: boolean
+};
 
 /**
  * The base Fuseman class, the character sprite which places fuses and detonates breakable tiles.
  */
-export default class Fuseman extends Sprite {
+export default class Fuseman extends Sprite implements Tickable {
     // Which player this is, from 1 to 5
     playerNumber: number;
 
@@ -22,6 +32,9 @@ export default class Fuseman extends Sprite {
     // Timestamp of last animation frame update
     lastAnimationFrameTimestamp: number;
 
+    // Stores the last movement intent pre-collision check for a tick
+    private currentIntent: MovementIntent;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -34,6 +47,7 @@ export default class Fuseman extends Sprite {
         // Reset animation flags
         this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
         this.isMoving = false;
+        this.currentIntent = {} as MovementIntent;
     }
 
     /**
@@ -86,6 +100,68 @@ export default class Fuseman extends Sprite {
             ctx.drawImage(
                 textures.fusers[this.playerNumber - 1].frames[ sheetFrameIndex ], this.pos.x, this.pos.y - 16
             );
+        }
+    }
+
+    /**
+     * Checks for movement intent before checking collisions or moving
+     */
+    updateMovementIntent(dt: number): void {
+        this.currentIntent = {
+            "direction": "down", // Default pose
+            "endPos": new Point2(this.pos.x, this.pos.y),
+            "isMoving": false
+        } as MovementIntent;
+
+        // Check for key press
+        if (this.playerNumber === 1) {
+            // Lock currently held keys & look for most recently pressed movement key
+            const keysHeld = [...globalThis.keysHeld];
+            for (let i = keysHeld.length; !this.currentIntent.isMoving && i >= 0; --i) {
+                switch (keysHeld[i]) {
+                    case Consts.KEYS.LEFT:
+                        if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
+                        this.currentIntent.direction = "left";
+                        this.currentIntent.isMoving = true;
+                        this.currentIntent.endPos.x -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        break;
+                    case Consts.KEYS.RIGHT:
+                        if (keysHeld.includes( Consts.KEYS.LEFT )) break;
+                        this.currentIntent.direction = "right";
+                        this.currentIntent.isMoving = true;
+                        this.currentIntent.endPos.x += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        break;
+                    case Consts.KEYS.DOWN:
+                        if (keysHeld.includes( Consts.KEYS.UP )) break;
+                        this.currentIntent.direction = "down";
+                        this.currentIntent.isMoving = true;
+                        this.currentIntent.endPos.y += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        break;
+                    case Consts.KEYS.UP:
+                        if (keysHeld.includes( Consts.KEYS.DOWN )) break;
+                        this.currentIntent.direction = "up";
+                        this.currentIntent.isMoving = true;
+                        this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        break;
+                }
+            }
+
+            // TODO - handle planting
+        }
+    }
+
+    /**
+     * Updates the Fuseman's position, including processing any key input
+     */
+    tick(dt: number) {
+        // Handle updates from last intent
+        this.isMoving = this.currentIntent.isMoving;
+        this.direction = this.currentIntent.direction;
+
+        // Move from last intent
+        if (this.isMoving) {
+            this.pos.x = this.currentIntent.endPos.x;
+            this.pos.y = this.currentIntent.endPos.y;
         }
     }
 };

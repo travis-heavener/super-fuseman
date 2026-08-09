@@ -1,6 +1,17 @@
 import Renderer from "./engine/Renderer.mjs";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    // Store held keys in order of recently pressed
+    globalThis.keysHeld = [] as string[];
+
+    // Bind key event listeners
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+        if (!globalThis.keysHeld.includes( e.code )) globalThis.keysHeld.push( e.code );
+    });
+    window.addEventListener("keyup", (e: KeyboardEvent) => {
+        globalThis.keysHeld.splice( globalThis.keysHeld.indexOf(e.code), 1 )
+    });
+
     // Begin requestAnimationFrame loop
     const renderer = await Renderer.create();
     let lastTime = 0;
@@ -12,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         lastTime = timestamp;
 
         // Update game state
-        // TODO
+        renderer.update(dt);
 
         // Render next frame
         renderer.render();

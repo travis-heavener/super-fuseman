@@ -118,6 +118,26 @@ export default class Renderer {
     }
 
     /**
+     * Updates the game state for each sprite
+     */
+    update(dt: number) {
+        // 1A. Update Fuseman sprite intents
+        this.fusers.forEach(f => f.updateMovementIntent(dt));
+
+        // 1B. Update fuse timings
+        // TODO
+
+        // 2A. Check for blast collisions
+        // TODO - check for collisions between blasts and fusers/mutable tiles/items/fuses (everything but other blasts and immutable tiles)
+
+        // 2B. Check for Fuser collisions
+        // TODO - check for collisions between fusers and tiles/items/fuses (everything but blasts)
+
+        // 3A. Update Fuser positions
+        this.fusers.forEach(f => f.tick(dt));
+    }
+
+    /**
      * Calls the draw method on each sprite
      */
     render() {

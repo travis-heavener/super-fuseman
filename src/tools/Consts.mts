@@ -12,6 +12,18 @@ export default Object.freeze({
     // Animation frame tick interval, in milliseconds
     ANIMATION_FRAME_INTERVAL_MS: 120,
 
+    // Movement speed in pixels/second for Fuseman
+    FUSEMAN_SPEED_PX_PER_SEC: 64,
+
+    // Default key mappings for Fuseman
+    KEYS: {
+        LEFT: "KeyA",
+        RIGHT: "KeyD",
+        UP: "KeyW",
+        DOWN: "KeyS",
+        PLANT: "KeyE"
+    },
+
     // The number of themes available in the spritesheet
     NUM_THEMES: 2
 });
