@@ -62,7 +62,8 @@ export default class Renderer {
     private createSprites() {
         // Create Fuseman sprites
         this.fusers.push(
-            new Fuseman(new Point2(16, 16), 1)
+            new Fuseman(new Point2(16, 16), 1),
+            new Fuseman(new Point2(16 * Consts.TILES_ACROSS, 16 * Consts.TILES_DOWN), 2)
         );
 
         // Create immutable tiles
