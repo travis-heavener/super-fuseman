@@ -1,3 +1,5 @@
+import Consts from "../tools/Consts.mjs";
+
 /**
  * Fuseman spritesheet map
  */
@@ -99,7 +101,7 @@ export default class Textures {
             tiles.backgroundTile = [];
 
             // For each theme...
-            for (let i = 0; i < 2; ++i) {
+            for (let i = 0; i < Consts.NUM_THEMES; ++i) {
                 tiles.frames.push(
                     await createImageBitmap( tilesSpritesheet, i * 16,  0, 16, 16 ), // Immutable tile
                     await createImageBitmap( tilesSpritesheet, i * 16, 16, 16, 16 ), // Mutable tile

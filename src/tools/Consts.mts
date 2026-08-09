@@ -25,5 +25,5 @@ export default Object.freeze({
     },
 
     // The number of themes available in the spritesheet
-    NUM_THEMES: 2
+    NUM_THEMES: 1
 });
