@@ -64,7 +64,8 @@ export default class Renderer {
         this.fusers.push(
             new Fuseman(new Point2(16, 16), 1),
             new Fuseman(new Point2(16 * Consts.TILES_ACROSS, 16 * Consts.TILES_DOWN), 2),
-            new Fuseman(new Point2(16 * Consts.TILES_ACROSS, 16), 3)
+            new Fuseman(new Point2(16 * Consts.TILES_ACROSS, 16), 3),
+            new Fuseman(new Point2(16, 16 * Consts.TILES_DOWN), 4)
         );
 
         // Create immutable tiles
