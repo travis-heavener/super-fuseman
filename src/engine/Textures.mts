@@ -77,7 +77,7 @@ export default class Textures {
                     "moveDown": [0, 1, 0, 2],
                     "moveRight": [3, 4, 3, 5],
                     "moveUp": [6, 7, 6, 8],
-                    "die": [9, 10, 11],
+                    "die": [9, 10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10],
                     "shadow": 12,
                     "moveLeft": [13, 14, 13, 15]
                 } as FusemanSpriteMap);

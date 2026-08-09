@@ -23,8 +23,9 @@ export default class Fuseman extends Sprite implements Tickable {
     // The direction the Fuseman is facing
     direction: "left" | "right" | "up" | "down";
 
-    // Whether or not the Fuseman is moving
-    isMoving: boolean;
+    isMoving: boolean; // Whether or not the Fuseman is moving (for animations)
+    isDying: boolean; // Whether or not the death animation is playing
+    isDead: boolean; // Whether or not the Fuseman can be controlled, can interact, etc.
 
     // The current animation frame index, resets to 0 when changing directions
     animFrameIndex: number;
@@ -46,21 +47,55 @@ export default class Fuseman extends Sprite implements Tickable {
 
         // Reset animation flags
         this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
-        this.isMoving = false;
+        this.isMoving = this.isDying = this.isDead = false;
         this.currentIntent = {} as MovementIntent;
+    }
+
+    /**
+     * Initiates the demise of Fuseman
+     */
+    private startDeath() {
+        this.isDying = true;
+        this.isMoving = false;
+        this.animFrameIndex = 0;
+    }
+
+    /**
+     * Ends the demise of Fuseman
+     */
+    private finishDeath() {
+        this.isDead = true;
+        this.isDying = false;
     }
 
     /**
      * Draws the Fuseman on the canvas.
      */
     draw(ctx: CanvasRenderingContext2D, textures: Textures) {
+        if (this.isDead) return;
+
         // Draw Fuseman's shadow
         const shadowFrameIndex = textures.fusers[this.playerNumber - 1].shadow;
         ctx.drawImage(
             textures.fusers[this.playerNumber - 1].frames[ shadowFrameIndex ], this.pos.x, this.pos.y - 16
         );
 
-        if (this.isMoving) {
+        // Handle dying Fuseman
+        if (this.isDying) {
+            const sheetFrameIndex = textures.fusers[this.playerNumber - 1].die[this.animFrameIndex];
+            const numFrames = textures.fusers[this.playerNumber - 1].die.length;
+
+            // Draw frame
+            ctx.drawImage(textures.fusers[this.playerNumber - 1].frames[sheetFrameIndex], this.pos.x, this.pos.y - 16);
+
+            // Cycle to next animation frame, if needed
+            if (this.animFrameIndex + 1 === numFrames) {
+                this.finishDeath();
+            } else if (Date.now() - this.lastAnimationFrameTimestamp > Consts.ANIMATION_FRAME_INTERVAL_MS) {
+                this.animFrameIndex = (this.animFrameIndex + 1) % numFrames;
+                this.lastAnimationFrameTimestamp = Date.now();
+            }
+        } else if (this.isMoving) {
             let numFrames: number; // Total number of frames for this animation
             let sheetFrameIndex: number; // Current frame index from the array of frames on spritesheet
 
@@ -107,6 +142,8 @@ export default class Fuseman extends Sprite implements Tickable {
      * Checks for movement intent before checking collisions or moving
      */
     updateMovementIntent(dt: number): void {
+        if (this.isDead) return;
+
         this.currentIntent = {
             "direction": "down", // Default pose
             "endPos": new Point2(this.pos.x, this.pos.y),
@@ -154,6 +191,8 @@ export default class Fuseman extends Sprite implements Tickable {
      * Updates the Fuseman's position, including processing any key input
      */
     tick(dt: number) {
+        if (this.isDead || this.isDying) return;
+
         // Handle updates from last intent
         this.isMoving = this.currentIntent.isMoving;
         this.direction = this.currentIntent.direction;
