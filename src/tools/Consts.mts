@@ -13,7 +13,7 @@ export default Object.freeze({
     ANIMATION_FRAME_INTERVAL_MS: 120,
 
     // Movement speed in pixels/second for Fuseman
-    FUSEMAN_SPEED_PX_PER_SEC: 64,
+    FUSEMAN_SPEED_PX_PER_SEC: 48,
 
     // Default key mappings for Fuseman
     KEYS: {
