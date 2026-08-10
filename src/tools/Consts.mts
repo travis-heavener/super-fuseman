@@ -24,7 +24,7 @@ export default Object.freeze({
         RIGHT: "KeyD",
         UP: "KeyW",
         DOWN: "KeyS",
-        PLANT: "KeyE"
+        PLANT: "KeyK"
     },
 
     // The number of themes available in the spritesheet
