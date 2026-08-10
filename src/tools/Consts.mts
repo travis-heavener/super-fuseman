@@ -21,6 +21,9 @@ export default Object.freeze({
     // The duration of each Blast before disappearing, in seconds
     BLAST_TIMER_SEC: 0.5,
 
+    // The duration of each MutableTile's destruction animation before disappearing, in seconds
+    TILE_CRUMBLE_TIMER_SEC: 0.05,
+
     // Default key mappings for Fuseman
     KEYS: {
         LEFT: "KeyA",

@@ -15,6 +15,7 @@ import Point2 from "../tools/Point2.mjs";
  */
 export default class Renderer {
     private fusers: Fuseman[];
+    private mutableTiles: MutableTile[];
     private fuses: Fuse[];
     private blasts: Blast[];
     private grid: (Sprite | null)[][];
@@ -27,6 +28,7 @@ export default class Renderer {
 
     private constructor(textures: Textures) {
         this.fusers = [];
+        this.mutableTiles = [];
         this.fuses = [];
         this.blasts = [];
 
@@ -129,6 +131,16 @@ export default class Renderer {
             // Remove this tile
             this.grid[x][y] = null;
         }
+
+        // Add all Mutable Tiles to internal array
+        // O(n^2) but only runs once at start
+        for (let x = 0; x < this.grid.length; ++x) {
+            for (let y = 0; y < this.grid[x].length; ++y) {
+                if (this.grid[x][y] instanceof MutableTile) {
+                    this.mutableTiles.push( this.grid[x][y] as MutableTile );
+                }
+            }
+        }
     }
 
     /**
@@ -150,6 +162,9 @@ export default class Renderer {
 
         // 3A. Update Fuser positions & execute actions
         this.fusers.forEach(f => f.tick(dt, this));
+
+        // 3B. Update mutable tiles & other tickables
+        this.mutableTiles.forEach(mt => mt.tick(dt, this));
     }
 
     /**
@@ -225,7 +240,14 @@ export default class Renderer {
 
         // Spread left
         for (let i = 1; i <= blastRadius; ++i) {
-            if (x - i <= 0 || this.grid[x - i][y]) break;
+            if (x - i <= 0) break;
+            if (this.grid[x - i][y] instanceof MutableTile) {
+                (this.grid[x - i][y] as MutableTile).destroy();
+                break;
+            } else if (this.grid[x - i][y]) {
+                break;
+            }
+
             this.blasts.push(
                 this.grid[x - i][y] = new Blast(
                     new Point2( (x - i) * 16, y * 16 ),
@@ -237,7 +259,14 @@ export default class Renderer {
 
         // Spread right
         for (let i = 1; i <= blastRadius; ++i) {
-            if (x + i + 1 === Consts.TILES_ACROSS_EXTERIOR || this.grid[x + i][y]) break;
+            if (x + i + 1 === Consts.TILES_ACROSS_EXTERIOR) break;
+            if (this.grid[x + i][y] instanceof MutableTile) {
+                (this.grid[x + i][y] as MutableTile).destroy();
+                break;
+            } else if (this.grid[x + i][y]) {
+                break;
+            }
+
             this.blasts.push(
                 this.grid[x + i][y] = new Blast(
                     new Point2( (x + i) * 16, y * 16 ),
@@ -249,7 +278,14 @@ export default class Renderer {
 
         // Spread up
         for (let i = 1; i <= blastRadius; ++i) {
-            if (y - i <= 0 || this.grid[x][y - i]) break;
+            if (y - i <= 0) break;
+            if (this.grid[x][y - i] instanceof MutableTile) {
+                (this.grid[x][y - i] as MutableTile).destroy();
+                break;
+            } else if (this.grid[x][y - i]) {
+                break;
+            }
+
             this.blasts.push(
                 this.grid[x][y - i] = new Blast(
                     new Point2( x * 16, (y - i) * 16 ),
@@ -261,7 +297,14 @@ export default class Renderer {
 
         // Spread down
         for (let i = 1; i <= blastRadius; ++i) {
-            if (y + i + 1 === Consts.TILES_DOWN_EXTERIOR || this.grid[x][y + i]) break;
+            if (y + i + 1 === Consts.TILES_DOWN_EXTERIOR) break;
+            if (this.grid[x][y + i] instanceof MutableTile) {
+                (this.grid[x][y + i] as MutableTile).destroy();
+                break;
+            } else if (this.grid[x][y + i]) {
+                break;
+            }
+
             this.blasts.push(
                 this.grid[x][y + i] = new Blast(
                     new Point2( x * 16, (y + i) * 16 ),
@@ -281,4 +324,15 @@ export default class Renderer {
         this.grid[x][y] = null;
         this.blasts.splice( this.blasts.indexOf(blast), 1 );
     }
+
+    /**
+     * Removes a mutable tile from the grid & array
+     */
+    removeMutableTile(mutableTile: MutableTile) {
+        const x = Math.floor(mutableTile.pos.x / 16);
+        const y = Math.floor(mutableTile.pos.y / 16);
+        this.grid[x][y] = null;
+        this.mutableTiles.splice( this.mutableTiles.indexOf(mutableTile), 1 );
+    }
+
 };

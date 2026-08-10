@@ -21,6 +21,7 @@ type TileSpriteMap = {
     "frames": ImageBitmap[],
     "immutableTile": number[],
     "mutableTile": number[],
+    "mutableTileCrumbling": number[][], // [themeIndex][frameIndex]
     "backgroundTile": number[],
     "fuse": number[],
     "blast": {
@@ -104,19 +105,40 @@ export default class Textures {
             // Push mutable & immutable tiles
             tiles.immutableTile = [];
             tiles.mutableTile = [];
+            tiles.mutableTileCrumbling = [];
             tiles.backgroundTile = [];
+
+            // Pre-load mutable tile crumbling mask
+            const mutableTileCrumbleMask = [
+                await createImageBitmap( tilesSpritesheet,  0, 48, 16, 16 ),
+                await createImageBitmap( tilesSpritesheet, 16, 48, 16, 16 ),
+                await createImageBitmap( tilesSpritesheet, 32, 48, 16, 16 )
+            ];
 
             // For each theme...
             for (let i = 0; i < Consts.NUM_THEMES; ++i) {
                 tiles.frames.push(
                     await createImageBitmap( tilesSpritesheet, i * 16,  0, 16, 16 ), // Immutable tile
                     await createImageBitmap( tilesSpritesheet, i * 16, 16, 16, 16 ), // Mutable tile
-                    await createImageBitmap( tilesSpritesheet, i * 16, 32, 16, 16 ), // Background tile
+                    await createImageBitmap( tilesSpritesheet, i * 16, 32, 16, 16 )  // Background tile
                 );
 
-                tiles.immutableTile.push(i * 3);
-                tiles.mutableTile.push(i * 3 + 1);
-                tiles.backgroundTile.push(i * 3 + 2);
+                const mutableTileIndex = tiles.frames.length - 2;
+                tiles.immutableTile.push(tiles.frames.length - 3);
+                tiles.mutableTile.push(mutableTileIndex);
+                tiles.backgroundTile.push(tiles.frames.length - 1);
+
+                // Generate crumbling frames for mutable tiles
+                tiles.frames.push(
+                    await Textures.createMaskedBitmap( tiles.frames[mutableTileIndex], mutableTileCrumbleMask[0] ),
+                    await Textures.createMaskedBitmap( tiles.frames[mutableTileIndex], mutableTileCrumbleMask[1] ),
+                    await Textures.createMaskedBitmap( tiles.frames[mutableTileIndex], mutableTileCrumbleMask[2] )
+                );
+                tiles.mutableTileCrumbling.push([
+                    tiles.frames.length - 3,
+                    tiles.frames.length - 2,
+                    tiles.frames.length - 1
+                ]);
             }
 
             // Load fuse textures
@@ -178,6 +200,30 @@ export default class Textures {
         ctx.drawImage(original, 0, 0);
         
         // 3. Convert back to an ImageBitmap
+        return await createImageBitmap(canvas);
+    }
+
+    /**
+     * Creates a masked bitmap where the mask removes pixels from the base texture
+     */
+    private static async createMaskedBitmap(base: ImageBitmap, mask: ImageBitmap) {
+        // Create offscreen canvas
+        const canvas = new OffscreenCanvas(16, 16);
+        canvas.width = canvas.height = 16;
+
+        const ctx = canvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
+        ctx.imageSmoothingEnabled = false;
+
+        // Draw base texture
+        ctx.drawImage(base, 0, 0);
+
+        // Switch mode to erase
+        ctx.globalCompositeOperation = "destination-out";
+
+        // Draw mask
+        ctx.drawImage(mask, 0, 0);
+
+        // Convert to bitmap image
         return await createImageBitmap(canvas);
     }
 };
