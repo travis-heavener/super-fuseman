@@ -163,7 +163,7 @@ export default class Renderer {
             }
         }
 
-        // Draw Fusers overtop
-        for (const f of this.fusers) f.draw(this.ctx, this.textures);
+        // Draw Fusers overtop (backwards so player 1 is atop player 2, etc.)
+        this.fusers.toReversed().forEach(f => f.draw(this.ctx, this.textures));
     }
 };
