@@ -75,6 +75,9 @@ export default class Fuseman extends Sprite {
             "numTotalFuses": 1,
             "numAvailFuses": 1
         } as FusemanStats);
+
+        // Disable opacity
+        super.disableOpaqueness();
     }
 
     /**

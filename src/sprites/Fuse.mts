@@ -34,6 +34,9 @@ export default class Fuse extends Sprite {
         this.isShowingLargerVariant = true;
         this.lastAnimationFrameTimestamp = 0;
         this.blastRadius = blastRadius;
+
+        // Disable opacity
+        super.disableOpaqueness();
     }
 
     /**

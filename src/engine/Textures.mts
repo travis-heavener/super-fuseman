@@ -22,7 +22,12 @@ type TileSpriteMap = {
     "immutableTile": number[],
     "mutableTile": number[],
     "backgroundTile": number[],
-    "fuse": number[]
+    "fuse": number[],
+    "blast": {
+        "center": number[],
+        "middle": number[],
+        "end": number[]
+    }
 };
 
 // Base path to resource files
@@ -118,9 +123,24 @@ export default class Textures {
             tiles.fuse = [];
             for (let i = 0; i < 6; ++i) {
                 tiles.frames.push( await createImageBitmap( tilesSpritesheet, i * 16, 96, 16, 16 ) );
-
-                // Push indexes from within frames array
                 tiles.fuse.push(tiles.frames.length - 1);
+            }
+
+            // Load blast textures
+            tiles.blast = { "center": [], "middle": [], "end": [] };
+            for (let i = 0; i < 6; ++i) {
+                tiles.frames.push(await createImageBitmap( tilesSpritesheet, i * 16, 112, 16, 16 ));
+                tiles.blast.center.push(tiles.frames.length - 1);
+            }
+
+            for (let i = 0; i < 6; ++i) {
+                tiles.frames.push(await createImageBitmap( tilesSpritesheet, i * 16, 128, 16, 16 ));
+                tiles.blast.middle.push(tiles.frames.length - 1);
+            }
+
+            for (let i = 0; i < 6; ++i) {
+                tiles.frames.push(await createImageBitmap( tilesSpritesheet, i * 16, 144, 16, 16 ));
+                tiles.blast.end.push(tiles.frames.length - 1);
             }
 
             // Free spritesheet

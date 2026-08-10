@@ -1,4 +1,5 @@
 import Consts from "../tools/Consts.mjs";
+import Blast from "../sprites/Blast.mjs";
 import Fuse from "../sprites/Fuse.mjs";
 import Fuseman from "../sprites/Fuseman.mjs";
 import Textures from "./Textures.mjs";
@@ -15,6 +16,7 @@ import Point2 from "../tools/Point2.mjs";
 export default class Renderer {
     private fusers: Fuseman[];
     private fuses: Fuse[];
+    private blasts: Blast[];
     private grid: (Sprite | null)[][];
 
     private textures: Textures;
@@ -26,6 +28,8 @@ export default class Renderer {
     private constructor(textures: Textures) {
         this.fusers = [];
         this.fuses = [];
+        this.blasts = [];
+
         this.canvas = document.getElementsByTagName("canvas")[0];
         this.ctx = this.canvas.getContext("2d") as any;
 
@@ -131,8 +135,9 @@ export default class Renderer {
         // 1A. Update Fuseman sprite intents
         this.fusers.forEach(fuseman => fuseman.updateMovementIntent(dt));
 
-        // 1B. Update fuse timings
+        // 1B. Update fuse & blast timers
         this.fuses.forEach(fuse => fuse.tick(dt, this));
+        this.blasts.forEach(blast => blast.tick(dt, this));
 
         // 2A. Check for blast collisions
         // TODO - check for collisions between blasts and fusers/mutable tiles/items/fuses (everything but other blasts and immutable tiles)
@@ -157,7 +162,7 @@ export default class Renderer {
                 const tile = this.grid[x][y];
 
                 // Draw background behind fuses
-                if (!tile || tile instanceof Fuse) {
+                if (!tile || !tile.isOpaque()) {
                     this.ctx.drawImage(
                         this.textures.tiles.frames[ this.textures.tiles.backgroundTile[this.themeIndex] ],
                         x * 16, y * 16,
@@ -170,8 +175,9 @@ export default class Renderer {
             }
         }
 
-        // Draw Fuses beneath Fuserman
+        // Draw Fuses & Blasts beneath Fuserman
         this.fuses.forEach(fuse => fuse.draw(this.ctx, this.textures));
+        this.blasts.forEach(blasts => blasts.draw(this.ctx, this.textures));
 
         // Draw Fusers overtop (backwards so player 1 is atop player 2, etc.)
         this.fusers.toReversed().forEach(f => f.draw(this.ctx, this.textures));
@@ -207,6 +213,69 @@ export default class Renderer {
         this.grid[x][y] = null;
         this.fuses.splice(this.fuses.indexOf(fuse), 1);
 
-        // TODO - create blast
+        /****** Create blasts ******/
+
+        // Center blast
+        this.blasts.push(
+            this.grid[x][y] = new Blast( new Point2(x * 16, y * 16), "center", 0 )
+        );
+
+        // Spread left
+        for (let i = 1; i <= blastRadius; ++i) {
+            if (x - i <= 0 || this.grid[x - i][y]) break;
+            this.blasts.push(
+                this.grid[x - i][y] = new Blast(
+                    new Point2( (x - i) * 16, y * 16 ),
+                    (i === blastRadius) ? "end" : "middle",
+                    90
+                )
+            );
+        }
+
+        // Spread right
+        for (let i = 1; i <= blastRadius; ++i) {
+            if (x + i + 1 === Consts.TILES_ACROSS_EXTERIOR || this.grid[x + i][y]) break;
+            this.blasts.push(
+                this.grid[x + i][y] = new Blast(
+                    new Point2( (x + i) * 16, y * 16 ),
+                    (i === blastRadius) ? "end" : "middle",
+                    270
+                )
+            );
+        }
+
+        // Spread up
+        for (let i = 1; i <= blastRadius; ++i) {
+            if (y - i <= 0 || this.grid[x][y - i]) break;
+            this.blasts.push(
+                this.grid[x][y - i] = new Blast(
+                    new Point2( x * 16, (y - i) * 16 ),
+                    (i === blastRadius) ? "end" : "middle",
+                    180
+                )
+            );
+        }
+
+        // Spread down
+        for (let i = 1; i <= blastRadius; ++i) {
+            if (y + i + 1 === Consts.TILES_DOWN_EXTERIOR || this.grid[x][y + i]) break;
+            this.blasts.push(
+                this.grid[x][y + i] = new Blast(
+                    new Point2( x * 16, (y + i) * 16 ),
+                    (i === blastRadius) ? "end" : "middle",
+                    0
+                )
+            );
+        }
+    }
+
+    /**
+     * Removes a blast sprite from the grid & array
+     */
+    removeBlast(blast: Blast) {
+        const x = Math.floor(blast.pos.x / 16);
+        const y = Math.floor(blast.pos.y / 16);
+        this.grid[x][y] = null;
+        this.blasts.splice( this.blasts.indexOf(blast), 1 );
     }
 };

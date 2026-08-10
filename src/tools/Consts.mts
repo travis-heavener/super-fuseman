@@ -15,8 +15,11 @@ export default Object.freeze({
     // Movement speed in pixels/second for Fuseman
     FUSEMAN_SPEED_PX_PER_SEC: 48,
 
-    // The duration of each Fuse before blowing, in milliseconds
+    // The duration of each Fuse before blowing, in seconds
     FUSE_TIMER_SEC: 3,
+
+    // The duration of each Blast before disappearing, in seconds
+    BLAST_TIMER_SEC: 1,
 
     // Default key mappings for Fuseman
     KEYS: {
