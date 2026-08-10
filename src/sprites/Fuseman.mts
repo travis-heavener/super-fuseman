@@ -157,33 +157,33 @@ export default class Fuseman extends Sprite implements Tickable {
         if (this.playerNumber === 1) {
             // Lock currently held keys & look for most recently pressed movement key
             const keysHeld = [...globalThis.keysHeld];
-            for (let i = keysHeld.length; !this.currentIntent.isMoving && i >= 0; --i) {
+            for (let i = keysHeld.length; i >= 0; --i) {
                 switch (keysHeld[i]) {
-                    case Consts.KEYS.LEFT:
-                        if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
+                    case Consts.KEYS.LEFT: // Move left
+                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.RIGHT )) break;
                         this.currentIntent.direction = "left";
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.x -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
-                    case Consts.KEYS.RIGHT:
-                        if (keysHeld.includes( Consts.KEYS.LEFT )) break;
+                    case Consts.KEYS.RIGHT: // Move right
+                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.LEFT )) break;
                         this.currentIntent.direction = "right";
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.x += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
-                    case Consts.KEYS.DOWN:
-                        if (keysHeld.includes( Consts.KEYS.UP )) break;
+                    case Consts.KEYS.DOWN: // Move down
+                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.UP )) break;
                         this.currentIntent.direction = "down";
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.y += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
-                    case Consts.KEYS.UP:
-                        if (keysHeld.includes( Consts.KEYS.DOWN )) break;
+                    case Consts.KEYS.UP: // Move up
+                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.DOWN )) break;
                         this.currentIntent.direction = "up";
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
-                    case Consts.KEYS.PLANT:
+                    case Consts.KEYS.PLANT: // Plant fuse
                         this.currentIntent.isPlacingFuse = true;
                         break;
                 }
