@@ -180,21 +180,25 @@ export default class Renderer {
     /**
      * Attempts to add a new fuse to the grid & internal array, silently fails (if space occupied)
      */
-    attemptPlaceFuse(x: number, y: number) {
+    attemptPlaceFuse(x: number, y: number, owner: Fuseman, blastRadius: number) {
         // Attempt to place fuse
         if (this.grid[x][y] !== null)
             return;
 
         // Place fuse
-        const fuse = new Fuse( new Point2(x * 16, y * 16) );
+        const fuse = new Fuse( new Point2(x * 16, y * 16), owner, blastRadius );
         this.fuses.push(fuse);
         this.grid[x][y] = fuse;
+        owner.decAvailFuses();
     }
 
     /**
      * Spawns a new blast at the location of a fuse
      */
-    spawnBlast(fuse: Fuse): void {
+    spawnBlast(fuse: Fuse, blastRadius: number): void {
+        // Allow owner to place more fuses
+        fuse.owner.incAvailFuses();
+
         // Determine grid position
         const x = Math.floor(fuse.pos.x / 16);
         const y = Math.floor(fuse.pos.y / 16);

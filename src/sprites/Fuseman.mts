@@ -16,6 +16,20 @@ type MovementIntent = {
 };
 
 /**
+ * Stats for Fuseman, including power-ups and blast radius
+ */
+type FusemanStats = {
+    // The blast radius of all fuses placed by this Fuseman (doesn't affect already placed ones)
+    blastRadius: number,
+
+    // The total number of fuses
+    numTotalFuses: number,
+
+    // The number of available fuses
+    numAvailFuses: number
+};
+
+/**
  * The base Fuseman class, the character sprite which places fuses and detonates breakable tiles.
  */
 export default class Fuseman extends Sprite implements Tickable {
@@ -38,6 +52,9 @@ export default class Fuseman extends Sprite implements Tickable {
     // Stores the last movement intent pre-collision check for a tick
     private currentIntent: MovementIntent;
 
+    // Fuseman's stats including blast radius, number of fuses, etc.
+    private stats: FusemanStats;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -51,6 +68,14 @@ export default class Fuseman extends Sprite implements Tickable {
         this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
         this.isMoving = this.isDying = this.isDead = false;
         this.currentIntent = {} as MovementIntent;
+
+        // Init Fuseman stats
+        this.stats = {} as FusemanStats;
+        Object.assign(this.stats, {
+            "blastRadius": 2,
+            "numTotalFuses": 1,
+            "numAvailFuses": 1
+        } as FusemanStats);
     }
 
     /**
@@ -184,6 +209,7 @@ export default class Fuseman extends Sprite implements Tickable {
                         this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
                     case Consts.KEYS.PLANT: // Plant fuse
+                        if (this.stats.numAvailFuses === 0) break;
                         this.currentIntent.isPlacingFuse = true;
                         break;
                 }
@@ -211,7 +237,13 @@ export default class Fuseman extends Sprite implements Tickable {
         if (this.currentIntent.isPlacingFuse) {
             const x = Math.round(this.pos.x / 16);
             const y = Math.round(this.pos.y / 16);
-            renderer.attemptPlaceFuse(x, y);
+            renderer.attemptPlaceFuse(x, y, this, this.stats.blastRadius);
         }
     }
+
+    /**
+     * Increases/reduces the number of available fuses
+     */
+    decAvailFuses(): void { --this.stats.numAvailFuses; }
+    incAvailFuses(): void { ++this.stats.numAvailFuses; }
 };

@@ -4,12 +4,19 @@ import Sprite from "./Sprite.mjs";
 import Textures from "../engine/Textures.mjs";
 import Tickable from "./Tickable.mjs";
 import Renderer from "../engine/Renderer.mjs";
+import Fuseman from "./Fuseman.mjs";
 
 /**
  * Fuses are placeable items that explode and spawn Blast sprites,
  *  which kill Fuseman, other collectable items, and mutable tiles
  */
 export default class Fuse extends Sprite implements Tickable {
+    // The owner Fuseman of this fuse
+    owner: Fuseman;
+
+    // The blast radius of the fuse
+    private blastRadius: number;
+
     // How much time is left before the Fuse explodes
     private timer: number;
 
@@ -19,13 +26,15 @@ export default class Fuse extends Sprite implements Tickable {
     // Timestamp of last animation frame update
     private lastAnimationFrameTimestamp: number;
 
-    constructor(pos: Point2) {
+    constructor(pos: Point2, owner: Fuseman, blastRadius: number) {
         super(pos);
 
         // Init fields
+        this.owner = owner;
         this.timer = Consts.FUSE_TIMER_SEC;
         this.isShowingLargerVariant = true;
         this.lastAnimationFrameTimestamp = 0;
+        this.blastRadius = blastRadius;
     }
 
     /**
@@ -60,7 +69,7 @@ export default class Fuse extends Sprite implements Tickable {
     tick(dt: number, renderer: Renderer) {
         // Check if timer is expired
         if (this.timer <= 0) {
-            renderer.spawnBlast(this);
+            renderer.spawnBlast(this, this.blastRadius);
             return;
         }
         this.timer -= dt;
