@@ -40,6 +40,9 @@ export default class Renderer {
         // Disable image smoothing (for pixel art)
         this.ctx.imageSmoothingEnabled = false;
 
+        // Disable context menus
+        this.canvas.addEventListener("contextmenu", e => e.preventDefault());
+
         // Load textures
         this.textures = textures;
 
