@@ -1,3 +1,4 @@
+import Renderer from "../engine/Renderer.mjs";
 import Textures from "../engine/Textures.mjs";
 import Point2 from "../tools/Point2.mjs";
 import Tickable from "./Tickable.mjs";
@@ -20,7 +21,7 @@ export default class MutableTile extends Tile implements Tickable {
     /**
      * Handle destruction animation
      */
-    tick(dt: number) {
+    tick(dt: number, renderer: Renderer) {
         // TODO
     }
 };

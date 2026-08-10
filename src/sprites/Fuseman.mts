@@ -3,6 +3,7 @@ import Point2 from "../tools/Point2.mjs";
 import Sprite from "./Sprite.mjs";
 import Textures from "../engine/Textures.mjs";
 import Tickable from "./Tickable.mjs";
+import Renderer from "../engine/Renderer.mjs";
 
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
@@ -10,7 +11,8 @@ import Tickable from "./Tickable.mjs";
 type MovementIntent = {
     direction: "left" | "right" | "up" | "down",
     endPos: Point2,
-    isMoving: boolean
+    isMoving: boolean,
+    isPlacingFuse: boolean
 };
 
 /**
@@ -21,17 +23,17 @@ export default class Fuseman extends Sprite implements Tickable {
     playerNumber: number;
 
     // The direction the Fuseman is facing
-    direction: "left" | "right" | "up" | "down";
+    private direction: "left" | "right" | "up" | "down";
 
-    isMoving: boolean; // Whether or not the Fuseman is moving (for animations)
-    isDying: boolean; // Whether or not the death animation is playing
-    isDead: boolean; // Whether or not the Fuseman can be controlled, can interact, etc.
+    private isMoving: boolean; // Whether or not the Fuseman is moving (for animations)
+    private isDying: boolean; // Whether or not the death animation is playing
+    private isDead: boolean; // Whether or not the Fuseman can be controlled, can interact, etc.
 
     // The current animation frame index, resets to 0 when changing directions
-    animFrameIndex: number;
+    private animFrameIndex: number;
 
     // Timestamp of last animation frame update
-    lastAnimationFrameTimestamp: number;
+    private lastAnimationFrameTimestamp: number;
 
     // Stores the last movement intent pre-collision check for a tick
     private currentIntent: MovementIntent;
@@ -147,7 +149,8 @@ export default class Fuseman extends Sprite implements Tickable {
         this.currentIntent = {
             "direction": "down", // Default pose
             "endPos": new Point2(this.pos.x, this.pos.y),
-            "isMoving": false
+            "isMoving": false,
+            "isPlacingFuse": false
         } as MovementIntent;
 
         // Check for key press
@@ -180,17 +183,18 @@ export default class Fuseman extends Sprite implements Tickable {
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
+                    case Consts.KEYS.PLANT:
+                        this.currentIntent.isPlacingFuse = true;
+                        break;
                 }
             }
-
-            // TODO - handle planting
         }
     }
 
     /**
      * Updates the Fuseman's position, including processing any key input
      */
-    tick(dt: number) {
+    tick(dt: number, renderer: Renderer) {
         if (this.isDead || this.isDying) return;
 
         // Handle updates from last intent
@@ -201,6 +205,13 @@ export default class Fuseman extends Sprite implements Tickable {
         if (this.isMoving) {
             this.pos.x = this.currentIntent.endPos.x;
             this.pos.y = this.currentIntent.endPos.y;
+        }
+
+        // Attempt to plant fuse
+        if (this.currentIntent.isPlacingFuse) {
+            const x = Math.round(this.pos.x / 16);
+            const y = Math.round(this.pos.y / 16);
+            renderer.attemptPlaceFuse(x, y);
         }
     }
 };

@@ -21,7 +21,8 @@ type TileSpriteMap = {
     "frames": ImageBitmap[],
     "immutableTile": number[],
     "mutableTile": number[],
-    "backgroundTile": number[]
+    "backgroundTile": number[],
+    "fuse": number[]
 };
 
 // Base path to resource files
@@ -89,7 +90,7 @@ export default class Textures {
             fusersSpritesheet.close();
         }
 
-        // Load tiles spritesheet bitmap
+        // Load tiles & items spritesheet bitmap
         const tiles = {} as TileSpriteMap;
         {
             const tilesSpritesheet = await Textures.loadSpritemap(resPath + "/gfx/tiles.png");
@@ -111,6 +112,15 @@ export default class Textures {
                 tiles.immutableTile.push(i * 3);
                 tiles.mutableTile.push(i * 3 + 1);
                 tiles.backgroundTile.push(i * 3 + 2);
+            }
+
+            // Load fuse textures
+            tiles.fuse = [];
+            for (let i = 0; i < 6; ++i) {
+                tiles.frames.push( await createImageBitmap( tilesSpritesheet, i * 16, 96, 16, 16 ) );
+
+                // Push indexes from within frames array
+                tiles.fuse.push(tiles.frames.length - 1);
             }
 
             // Free spritesheet

@@ -1,4 +1,5 @@
 import Consts from "../tools/Consts.mjs";
+import Fuse from "../sprites/Fuse.mjs";
 import Fuseman from "../sprites/Fuseman.mjs";
 import Textures from "./Textures.mjs";
 import Sprite from "../sprites/Sprite.mjs";
@@ -13,6 +14,7 @@ import Point2 from "../tools/Point2.mjs";
  */
 export default class Renderer {
     private fusers: Fuseman[];
+    private fuses: Fuse[];
     private grid: (Sprite | null)[][];
 
     private textures: Textures;
@@ -23,6 +25,7 @@ export default class Renderer {
 
     private constructor(textures: Textures) {
         this.fusers = [];
+        this.fuses = [];
         this.canvas = document.getElementsByTagName("canvas")[0];
         this.ctx = this.canvas.getContext("2d") as any;
 
@@ -126,10 +129,10 @@ export default class Renderer {
      */
     update(dt: number) {
         // 1A. Update Fuseman sprite intents
-        this.fusers.forEach(f => f.updateMovementIntent(dt));
+        this.fusers.forEach(fuseman => fuseman.updateMovementIntent(dt));
 
         // 1B. Update fuse timings
-        // TODO
+        this.fuses.forEach(fuse => fuse.tick(dt, this));
 
         // 2A. Check for blast collisions
         // TODO - check for collisions between blasts and fusers/mutable tiles/items/fuses (everything but other blasts and immutable tiles)
@@ -137,8 +140,8 @@ export default class Renderer {
         // 2B. Check for Fuser collisions
         // TODO - check for collisions between fusers and tiles/items/fuses (everything but blasts)
 
-        // 3A. Update Fuser positions
-        this.fusers.forEach(f => f.tick(dt));
+        // 3A. Update Fuser positions & execute actions
+        this.fusers.forEach(f => f.tick(dt, this));
     }
 
     /**
@@ -151,19 +154,55 @@ export default class Renderer {
         // Draw tiles first
         for (let x = 0; x < this.grid.length; ++x) {
             for (let y = 0; y < this.grid[x].length; ++y) {
-                if (this.grid[x][y]) {
-                    this.grid[x][y]!.draw(this.ctx, this.textures);
-                } else {
+                const tile = this.grid[x][y];
+
+                // Draw background behind fuses
+                if (!tile || tile instanceof Fuse) {
                     this.ctx.drawImage(
                         this.textures.tiles.frames[ this.textures.tiles.backgroundTile[this.themeIndex] ],
                         x * 16, y * 16,
                         16, 16
                     );
                 }
+
+                // Draw any filled tiles' Sprites
+                if (tile) tile!.draw(this.ctx, this.textures);
             }
         }
 
+        // Draw Fuses beneath Fuserman
+        this.fuses.forEach(fuse => fuse.draw(this.ctx, this.textures));
+
         // Draw Fusers overtop (backwards so player 1 is atop player 2, etc.)
         this.fusers.toReversed().forEach(f => f.draw(this.ctx, this.textures));
+    }
+
+    /**
+     * Attempts to add a new fuse to the grid & internal array, silently fails (if space occupied)
+     */
+    attemptPlaceFuse(x: number, y: number) {
+        // Attempt to place fuse
+        if (this.grid[x][y] !== null)
+            return;
+
+        // Place fuse
+        const fuse = new Fuse( new Point2(x * 16, y * 16) );
+        this.fuses.push(fuse);
+        this.grid[x][y] = fuse;
+    }
+
+    /**
+     * Spawns a new blast at the location of a fuse
+     */
+    spawnBlast(fuse: Fuse): void {
+        // Determine grid position
+        const x = Math.floor(fuse.pos.x / 16);
+        const y = Math.floor(fuse.pos.y / 16);
+
+        // Remove fuse
+        this.grid[x][y] = null;
+        this.fuses.splice(this.fuses.indexOf(fuse), 1);
+
+        // TODO - create blast
     }
 };
