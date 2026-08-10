@@ -2,7 +2,6 @@ import Consts from "../tools/Consts.mjs";
 import Point2 from "../tools/Point2.mjs";
 import Sprite from "./Sprite.mjs";
 import Textures from "../engine/Textures.mjs";
-import Tickable from "./Tickable.mjs";
 import Renderer from "../engine/Renderer.mjs";
 
 /**
@@ -32,7 +31,7 @@ type FusemanStats = {
 /**
  * The base Fuseman class, the character sprite which places fuses and detonates breakable tiles.
  */
-export default class Fuseman extends Sprite implements Tickable {
+export default class Fuseman extends Sprite {
     // Which player this is, from 1 to 5
     playerNumber: number;
 

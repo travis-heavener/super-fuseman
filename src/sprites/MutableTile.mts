@@ -1,13 +1,12 @@
 import Renderer from "../engine/Renderer.mjs";
 import Textures from "../engine/Textures.mjs";
 import Point2 from "../tools/Point2.mjs";
-import Tickable from "./Tickable.mjs";
 import Tile from "./Tile.mjs";
 
 /**
  * Mutable Tiles are Tiles which can be destroyed by fuses.
  */
-export default class MutableTile extends Tile implements Tickable {
+export default class MutableTile extends Tile {
     constructor(pos: Point2, themeIndex: number) {
         super(pos, themeIndex);
     }

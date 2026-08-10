@@ -2,7 +2,6 @@ import Consts from "../tools/Consts.mjs";
 import Point2 from "../tools/Point2.mjs";
 import Sprite from "./Sprite.mjs";
 import Textures from "../engine/Textures.mjs";
-import Tickable from "./Tickable.mjs";
 import Renderer from "../engine/Renderer.mjs";
 import Fuseman from "./Fuseman.mjs";
 
@@ -10,7 +9,7 @@ import Fuseman from "./Fuseman.mjs";
  * Fuses are placeable items that explode and spawn Blast sprites,
  *  which kill Fuseman, other collectable items, and mutable tiles
  */
-export default class Fuse extends Sprite implements Tickable {
+export default class Fuse extends Sprite {
     // The owner Fuseman of this fuse
     owner: Fuseman;
 
