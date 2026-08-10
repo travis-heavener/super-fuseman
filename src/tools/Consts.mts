@@ -19,7 +19,7 @@ export default Object.freeze({
     FUSE_TIMER_SEC: 3,
 
     // The duration of each Blast before disappearing, in seconds
-    BLAST_TIMER_SEC: 1,
+    BLAST_TIMER_SEC: 0.5,
 
     // Default key mappings for Fuseman
     KEYS: {
