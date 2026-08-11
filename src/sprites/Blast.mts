@@ -74,11 +74,18 @@ export default class Blast extends Sprite {
      * Returns slightly smaller bounds for blast tiles
      */
     getBounds(): Point2[] {
+        // How much margin to add around blast tiles
+        // NOTE: too much margin (8px or greater) introduces the chance
+        //  that a Fuseman sprite can clip between blasts. Since blasts
+        //  spawn in rows, making them a slightly smaller square works
+        //  fine for this implementation.
+        const margin = 2;
+
         return [
-            new Point2(this.pos.x + 1,  this.pos.y + 1),
-            new Point2(this.pos.x + 15, this.pos.y + 1),
-            new Point2(this.pos.x + 1,  this.pos.y + 15),
-            new Point2(this.pos.x + 15, this.pos.y + 15)
+            new Point2(this.pos.x + margin,      this.pos.y + margin),
+            new Point2(this.pos.x + 16 - margin, this.pos.y + margin),
+            new Point2(this.pos.x + margin,      this.pos.y + 16 - margin),
+            new Point2(this.pos.x + 16 - margin, this.pos.y + 16 - margin)
         ];
     }
 };
