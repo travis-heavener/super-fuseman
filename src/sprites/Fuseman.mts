@@ -10,7 +10,6 @@ import Blast from "./Blast.mjs";
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
  */
 type MovementIntent = {
-    direction: "left" | "right" | "up" | "down",
     endPos: Point2,
     isMoving: boolean,
     isPlacingFuse: boolean
@@ -169,7 +168,7 @@ export default class Fuseman extends Sprite {
         }
     }
 
-    /**
+/**
      * Checks for movement intent before checking collisions or moving
      */
     updateMovementIntent(dt: number): void {
@@ -189,26 +188,22 @@ export default class Fuseman extends Sprite {
             for (let i = keysHeld.length; i >= 0; --i) {
                 switch (keysHeld[i]) {
                     case Consts.KEYS.LEFT: // Move left
-                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.RIGHT )) break;
-                        this.currentIntent.direction = "left";
+                        if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.x -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
                     case Consts.KEYS.RIGHT: // Move right
-                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.LEFT )) break;
-                        this.currentIntent.direction = "right";
+                        if (keysHeld.includes( Consts.KEYS.LEFT )) break;
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.x += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
                     case Consts.KEYS.DOWN: // Move down
-                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.UP )) break;
-                        this.currentIntent.direction = "down";
+                        if (keysHeld.includes( Consts.KEYS.UP )) break;
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.y += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
                     case Consts.KEYS.UP: // Move up
-                        if (this.currentIntent.isMoving || keysHeld.includes( Consts.KEYS.DOWN )) break;
-                        this.currentIntent.direction = "up";
+                        if (keysHeld.includes( Consts.KEYS.DOWN )) break;
                         this.currentIntent.isMoving = true;
                         this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
                         break;
@@ -229,10 +224,15 @@ export default class Fuseman extends Sprite {
 
         // Handle updates from last intent
         this.isMoving = this.currentIntent.isMoving;
-        this.direction = this.currentIntent.direction;
 
         // Move from last intent
         if (this.isMoving) {
+            // Determine direction
+            if      (this.pos.y < this.currentIntent.endPos.y) this.direction = "down";
+            else if (this.pos.y > this.currentIntent.endPos.y) this.direction = "up";
+            else if (this.pos.x < this.currentIntent.endPos.x) this.direction = "right";
+            else if (this.pos.x > this.currentIntent.endPos.x) this.direction = "left";
+
             this.pos.x = this.currentIntent.endPos.x;
             this.pos.y = this.currentIntent.endPos.y;
         }
