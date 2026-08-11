@@ -69,4 +69,16 @@ export default class Blast extends Sprite {
         }
         this.timer -= dt;
     }
+
+    /**
+     * Returns slightly smaller bounds for blast tiles
+     */
+    getBounds(): Point2[] {
+        return [
+            new Point2(this.pos.x + 1,  this.pos.y + 1),
+            new Point2(this.pos.x + 15, this.pos.y + 1),
+            new Point2(this.pos.x + 1,  this.pos.y + 15),
+            new Point2(this.pos.x + 15, this.pos.y + 15)
+        ];
+    }
 };
