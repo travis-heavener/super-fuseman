@@ -255,11 +255,12 @@ export default class Fuseman extends Sprite {
      * Returns the current bounds based on the movement intents
      */
     getBounds(): Point2[] {
+        const { x, y } = this.currentIntent.endPos;
         return [
-            new Point2(this.currentIntent.endPos.x,      this.currentIntent.endPos.y),
-            new Point2(this.currentIntent.endPos.x + 16, this.currentIntent.endPos.y),
-            new Point2(this.currentIntent.endPos.x,      this.currentIntent.endPos.y + 16),
-            new Point2(this.currentIntent.endPos.x + 16, this.currentIntent.endPos.y + 16)
+            new Point2(x,      y),
+            new Point2(x + 16, y),
+            new Point2(x,      y + 16),
+            new Point2(x + 16, y + 16)
         ];
     }
 
@@ -342,7 +343,7 @@ export default class Fuseman extends Sprite {
         }
 
         // Test y-axis (reset x-coordinate)
-        this.currentIntent.endPos.x = this.pos.x;
+        this.currentIntent.endPos.x = newEndPos.x;
         this.currentIntent.endPos.y = newEndPos.y;
         collisions = this.getCollisions(renderer);
 
@@ -357,6 +358,7 @@ export default class Fuseman extends Sprite {
         }
 
         // Otherwise, didn't die so correct position
-        this.currentIntent.endPos = newEndPos;
+        this.currentIntent.endPos.x = Math.round(newEndPos.x);
+        this.currentIntent.endPos.y = Math.round(newEndPos.y);
     }
 };
