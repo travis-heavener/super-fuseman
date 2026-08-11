@@ -13,4 +13,13 @@ export default abstract class Tile extends Sprite {
         super(pos);
         this.themeIndex = themeIndex;
     }
+
+    getBounds(): Point2[] {
+        return [
+            new Point2(this.pos.x, this.pos.y),
+            new Point2(this.pos.x + 16, this.pos.y),
+            new Point2(this.pos.x, this.pos.y + 16),
+            new Point2(this.pos.x + 16, this.pos.y + 16)
+        ];
+    }
 };

@@ -3,6 +3,8 @@ import Point2 from "../tools/Point2.mjs";
 import Sprite from "./Sprite.mjs";
 import Textures from "../engine/Textures.mjs";
 import Renderer from "../engine/Renderer.mjs";
+import Tile from "./Tile.mjs";
+import Blast from "./Blast.mjs";
 
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
@@ -248,4 +250,113 @@ export default class Fuseman extends Sprite {
      */
     decAvailFuses(): void { --this.stats.numAvailFuses; }
     incAvailFuses(): void { ++this.stats.numAvailFuses; }
+
+    /**
+     * Returns the current bounds based on the movement intents
+     */
+    getBounds(): Point2[] {
+        return [
+            new Point2(this.currentIntent.endPos.x,      this.currentIntent.endPos.y),
+            new Point2(this.currentIntent.endPos.x + 16, this.currentIntent.endPos.y),
+            new Point2(this.currentIntent.endPos.x,      this.currentIntent.endPos.y + 16),
+            new Point2(this.currentIntent.endPos.x + 16, this.currentIntent.endPos.y + 16)
+        ];
+    }
+
+    /**
+     * Checks for collisions between objects in O(n) time using deterministic grid lookup
+     * 
+     * Returns collided sprites in an array
+     */
+    private getCollisions(renderer: Renderer): Sprite[] {
+        // Get references to nearby objects
+        const center = new Point2(
+            this.currentIntent.endPos.x + 8,
+            this.currentIntent.endPos.y + 8
+        );
+        const nearbySprites: Sprite[] = [];
+
+        // Determine grid coordinates
+        const x = Math.floor(center.x / 16);
+        const y = Math.floor(center.y / 16);
+
+        for (let xo = x - 1; xo <= x + 1; ++xo) {
+            for (let yo = y - 1; yo <= y + 1; ++yo) {
+                // Skip out of bounds
+                if (xo < 0 || xo >= Consts.TILES_ACROSS_EXTERIOR ||
+                    yo < 0 || yo >= Consts.TILES_DOWN_EXTERIOR) {
+                    continue;
+                }
+
+                // Lookup sprite
+                const sprite: Sprite | null = renderer.getSpriteFromGrid( xo, yo );
+                if (sprite) nearbySprites.push(sprite);
+            }
+        }
+
+        // Pre-compute bounds of this object
+        const bounds = this.getBounds();
+        const aLeft = bounds[0].x;
+        const aRight = bounds[1].x;
+        const aTop = bounds[0].y;
+        const aBottom = bounds[2].y;
+
+        // Check against all nearby objects
+        const collidedSprites: Sprite[] = [];
+        for (const sprite of nearbySprites) {
+            // Get bounds of other srpite
+            const spriteBounds = sprite.getBounds();
+            const bLeft = spriteBounds[0].x;
+            const bRight = spriteBounds[1].x;
+            const bTop = spriteBounds[0].y;
+            const bBottom = spriteBounds[2].y;
+
+            // AABB collision check
+            if (aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop) {
+                collidedSprites.push(sprite);
+            }
+        }
+
+        return collidedSprites;
+    }
+
+    /**
+     * Resolves movement between colliding objects with this Fuseman, O(n) time
+     */
+    resolveCollisions(renderer: Renderer) {
+        // Temporarily override movement intent to check individual axes
+        const newEndPos = this.currentIntent.endPos.copy();
+
+        // Test x-axis (reset y-coordinate)
+        this.currentIntent.endPos.y = this.pos.y;
+        let collisions = this.getCollisions(renderer);
+
+        for (const sprite of collisions) {
+            if (sprite instanceof Tile) {
+                // Correct final x-coordinate
+                newEndPos.x = sprite.pos.x + (sprite.pos.x < newEndPos.x ? 16 : -16);
+            } else if (sprite instanceof Blast) {
+                this.startDeath();
+                return;
+            }
+        }
+
+        // Test y-axis (reset x-coordinate)
+        this.currentIntent.endPos.x = this.pos.x;
+        this.currentIntent.endPos.y = newEndPos.y;
+        collisions = this.getCollisions(renderer);
+
+        for (const sprite of collisions) {
+            if (sprite instanceof Tile) {
+                // Correct final y-coordinate
+                newEndPos.y = sprite.pos.y + (sprite.pos.y < newEndPos.y ? 16 : -16);
+            } else if (sprite instanceof Blast) {
+                this.startDeath();
+                return;
+            }
+        }
+
+        // Otherwise, didn't die so correct position
+        this.currentIntent.endPos = newEndPos;
+    }
 };

@@ -36,4 +36,11 @@ export default abstract class Sprite {
     isOpaque() {
         return this._isOpaque;
     }
+
+    /**
+     * Returns the bounds in the form of an array of Point2
+     * 
+     * Format: [top-left, top-right, bottom-left, bottom-right]
+     */
+    abstract getBounds(): Point2[];
 };

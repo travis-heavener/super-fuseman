@@ -9,4 +9,11 @@ export default class Point2 {
         this.x = x;
         this.y = y;
     }
+
+    /**
+     * Generates a new copy of this object
+     */
+    copy(): Point2 {
+        return new Point2(this.x, this.y);
+    }
 };

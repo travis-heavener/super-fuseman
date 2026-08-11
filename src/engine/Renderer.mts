@@ -158,7 +158,7 @@ export default class Renderer {
         // TODO - check for collisions between blasts and fusers/mutable tiles/items/fuses (everything but other blasts and immutable tiles)
 
         // 2B. Check for Fuser collisions
-        // TODO - check for collisions between fusers and tiles/items/fuses (everything but blasts)
+        this.fusers.forEach(fuseman => fuseman.resolveCollisions(this));
 
         // 3A. Update Fuser positions & execute actions
         this.fusers.forEach(f => f.tick(dt, this));
@@ -333,6 +333,13 @@ export default class Renderer {
         const y = Math.floor(mutableTile.pos.y / 16);
         this.grid[x][y] = null;
         this.mutableTiles.splice( this.mutableTiles.indexOf(mutableTile), 1 );
+    }
+
+    /**
+     * Returns a sprite located at a tile at a grid x,y pair
+     */
+    getSpriteFromGrid(x: number, y: number): Sprite | null {
+        return this.grid[x][y];
     }
 
 };

@@ -83,4 +83,16 @@ export default class Fuse extends Sprite {
     triggerBlast() {
         this.timer = 0;
     }
+
+    /**
+     * Returns the bounding box of the Fuse
+     */
+    getBounds(): Point2[] {
+        return [
+            new Point2(this.pos.x, this.pos.y),
+            new Point2(this.pos.x + 16, this.pos.y),
+            new Point2(this.pos.x, this.pos.y + 16),
+            new Point2(this.pos.x + 16, this.pos.y + 16)
+        ];
+    }
 };
