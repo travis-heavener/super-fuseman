@@ -14,6 +14,15 @@ type ActionIntent = {
     type: "movement" | "placingFuse";
     direction?: "left" | "right" | "down" | "up";
     endPos?: Point2;
+    isAdjusted?: boolean;
+};
+
+/**
+ * Used for assuming directions when navigating tight corners
+ */
+type ForcedDirection = {
+    direction: "left" | "right" | "down" | "up";
+    timestamp: number;
 };
 
 /**
@@ -50,6 +59,9 @@ export default class Fuseman extends Sprite {
     // Timestamp of last animation frame update
     private lastAnimationFrameTimestamp: number;
 
+    // Used to force navigation a certain direction for a short period of time (e.g. corner navigating where multiple directions possible)
+    private forcedDirection: ForcedDirection | null;
+
     // Stores current action intents pre-collision check per tick
     private currentIntents: ActionIntent[];
 
@@ -69,6 +81,7 @@ export default class Fuseman extends Sprite {
         this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
         this.isMoving = this.isDying = this.isDead = false;
         this.currentIntents = [] as ActionIntent[];
+        this.forcedDirection = null;
 
         // Init Fuseman stats
         this.stats = {} as FusemanStats;
@@ -182,14 +195,15 @@ export default class Fuseman extends Sprite {
         if (this.playerNumber === 1) {
             // Lock currently held keys & look for most recently pressed movement key
             const keysHeld = [...globalThis.keysHeld];
-            for (let i = keysHeld.length; i >= 0; --i) {
-                switch (keysHeld[i]) {
+            for (const key of keysHeld) {
+                switch (key) {
                     case Consts.KEYS.LEFT: // Move left
                         if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "left",
-                            "endPos": this.pos.offset( -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 )
+                            "endPos": this.pos.offset( -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
+                            "isAdjusted": false
                         });
                         break;
                     case Consts.KEYS.RIGHT: // Move right
@@ -197,7 +211,8 @@ export default class Fuseman extends Sprite {
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "right",
-                            "endPos": this.pos.offset( Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 )
+                            "endPos": this.pos.offset( Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
+                            "isAdjusted": false
                         });
                         break;
                     case Consts.KEYS.DOWN: // Move down
@@ -205,7 +220,8 @@ export default class Fuseman extends Sprite {
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "down",
-                            "endPos": this.pos.offset( 0, Consts.FUSEMAN_SPEED_PX_PER_SEC * dt )
+                            "endPos": this.pos.offset( 0, Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
+                            "isAdjusted": false
                         });
                         break;
                     case Consts.KEYS.UP: // Move up
@@ -213,12 +229,13 @@ export default class Fuseman extends Sprite {
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "up",
-                            "endPos": this.pos.offset( 0, -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt )
+                            "endPos": this.pos.offset( 0, -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
+                            "isAdjusted": false
                         });
                         break;
                     case Consts.KEYS.PLANT: // Plant fuse
                         if (this.stats.numAvailFuses === 0) break;
-                        this.currentIntents.push({ "type": "placingFuse" });
+                        this.currentIntents.push({ "type": "placingFuse", "isAdjusted": false });
                         break;
                 }
             }
@@ -339,6 +356,14 @@ export default class Fuseman extends Sprite {
      * Resolves movement between colliding objects with this Fuseman, O(n) time
      */
     resolveCollisions(renderer: Renderer) {
+        // Remove old forced directions or if the direction is no longer in the intents
+        if ( this.forcedDirection &&
+            (this.forcedDirection!.timestamp + 100 < Date.now() ||
+            !this.currentIntents.some(i => i.type === "movement" && i.direction! !== this.forcedDirection!.direction))
+        ){
+            this.forcedDirection = null;
+        }
+
         // If there are no movement intents, just check for blast collisions
         if ( !this.currentIntents.some(i => i.type === "movement") ) {
             const collisions = this.getCollisions(this.pos.copy(), renderer);
@@ -352,15 +377,14 @@ export default class Fuseman extends Sprite {
         }
 
         // Resolve for each intent
-        let hasResolvedMovementIntent = false;
         for (let i = 0; i < this.currentIntents.length; ++i) {
             const intent = this.currentIntents[i];
 
             // Skip fuse placement intents
             if (intent.type === "placingFuse") continue;
 
-            // Skip extra movements that predate latest valid movement (from held keys)
-            if (intent.type === "movement" && hasResolvedMovementIntent) {
+            // Use forced direction, if present, discarding other directions
+            if (this.forcedDirection && intent.direction !== this.forcedDirection.direction) {
                 this.currentIntents.splice(i--, 1);
                 continue;
             }
@@ -372,8 +396,8 @@ export default class Fuseman extends Sprite {
             intent.endPos!.y = this.pos.y;
             let collisions = this.getCollisions(intent.endPos!, renderer);
 
-            // Flip flag until proven otherwise
-            hasResolvedMovementIntent = true;
+            // Track whether or not this intent was successful
+            let hasResolvedMovementIntent = true;
 
             for (const sprite of collisions) {
                 if (sprite instanceof Tile || sprite instanceof Fuse) {
@@ -386,8 +410,10 @@ export default class Fuseman extends Sprite {
                     // Check for gap below collided tile
                     if ( intent.endPos!.y - sprite.pos.y >= 14 && gridSpaceBelow === null ) {
                         newEndPos.y = sprite.pos.y + 16; // Fix alignment
+                        intent.isAdjusted = true;
                     } else if ( sprite.pos.y - intent.endPos!.y >= 14 && gridSpaceAbove === null ) {
                         newEndPos.y = sprite.pos.y - 16; // Fix alignment
+                        intent.isAdjusted = true;
                     } else if ((sprite.pos.x < newEndPos.x && intent.direction === "left") ||
                         (sprite.pos.x > newEndPos.x && intent.direction === "right")
                     ) { // Correct final x-coordinate if not moving away from obstacle
@@ -416,8 +442,10 @@ export default class Fuseman extends Sprite {
                     // Check for gap below collided tile
                     if ( intent.endPos!.x - sprite.pos.x >= 14 && gridSpaceRight === null ) {
                         newEndPos.x = sprite.pos.x + 16; // Fix alignment
+                        intent.isAdjusted = true;
                     } else if ( sprite.pos.x - intent.endPos!.x >= 14 && gridSpaceLeft === null ) {
                         newEndPos.x = sprite.pos.x - 16; // Fix alignment
+                        intent.isAdjusted = true;
                     } else if ((sprite.pos.y < newEndPos.y && intent.direction === "up") ||
                         (sprite.pos.y > newEndPos.y && intent.direction === "down")
                     ) { // Correct final y-coordinate if not moving away from obstacle
@@ -436,6 +464,52 @@ export default class Fuseman extends Sprite {
 
             // If this intent has failed due to collision, remove from intents
             if (!hasResolvedMovementIntent) this.currentIntents.splice(i--, 1);
+        }
+
+        // Filter through any valid movement intents
+        let movementIntents = this.currentIntents.filter(intent => intent.type === "movement");
+        if ( movementIntents.length > 1 ) {
+            // Must be between two options (due to keyboard direction lockout for opposing directions)
+            const [ intentA, intentB ] = movementIntents;
+
+            // Check for matching forced direction
+            if (this.forcedDirection && this.forcedDirection.direction === intentA.direction) {
+                this.currentIntents.splice( this.currentIntents.indexOf( intentB ), 1 ); // Remove B
+            } else if (this.forcedDirection && this.forcedDirection.direction === intentB.direction) {
+                this.currentIntents.splice( this.currentIntents.indexOf( intentA ), 1 ); // Remove A
+            } else if (this.forcedDirection) {
+                // No matching direction, remove all movement intents
+                this.currentIntents = this.currentIntents.filter(intent => intent.type !== "movement");
+            } else { // No matching forced direction
+                // If both are unadjusted, choose one that doesn't match current direction
+                if (!intentA.isAdjusted && !intentB.isAdjusted) {
+                    if (intentA.direction === this.direction && this.isMoving) // Remove A
+                        movementIntents.shift();
+                    else if (intentB.direction === this.direction && this.isMoving) // Remove B
+                        movementIntents.pop();
+                    else // Choose first input, remove B
+                        movementIntents.pop();
+                } else if (intentA.isAdjusted !== intentB.isAdjusted) {
+                    // One adjusted, one not, choose adjusted one
+                    if (intentA.isAdjusted) // Remove B
+                        movementIntents.pop();
+                    else if (intentB.isAdjusted) // Remove A
+                        movementIntents.shift();
+                    else // Choose first input, remove B
+                        movementIntents.pop();
+                } else {
+                    // Both adjusted, choose first input
+                    movementIntents.pop(); // Remove B
+                }
+
+                // Force a new direction
+                this.forcedDirection = { "direction": movementIntents[0].direction!, "timestamp": Date.now() };
+
+                // Remove old movement intents
+                this.currentIntents = this.currentIntents.filter((intent) => {
+                    return intent.type !== "movement" || (intent.type === "movement" && intent === movementIntents[0])
+                });
+            }
         }
     }
 };
