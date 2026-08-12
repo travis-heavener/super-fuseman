@@ -59,6 +59,9 @@ export default class Fuseman extends Sprite {
     // Timestamp of last animation frame update
     private lastAnimationFrameTimestamp: number;
 
+    // Timestamp of last footstep sfx
+    private lastFootstepSFXTimestamp: number;
+
     // Used to force navigation a certain direction for a short period of time (e.g. corner navigating where multiple directions possible)
     private forcedDirection: ForcedDirection | null;
 
@@ -78,7 +81,7 @@ export default class Fuseman extends Sprite {
         this.direction = "down";
 
         // Reset animation flags
-        this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
+        this.animFrameIndex = this.lastAnimationFrameTimestamp = this.lastFootstepSFXTimestamp = 0;
         this.isMoving = this.isDying = this.isDead = false;
         this.currentIntents = [] as ActionIntent[];
         this.forcedDirection = null;
@@ -170,6 +173,12 @@ export default class Fuseman extends Sprite {
             if (Date.now() - this.lastAnimationFrameTimestamp > Consts.ANIMATION_FRAME_INTERVAL_MS) {
                 this.animFrameIndex = (this.animFrameIndex + 1) % numFrames;
                 this.lastAnimationFrameTimestamp = Date.now();
+            }
+
+            // Play footstep sound, if needed
+            if (Date.now() - this.lastFootstepSFXTimestamp > Consts.FOOTSTEP_SFX_INTERVAL_MS) {
+                this.lastFootstepSFXTimestamp = Date.now();
+                globalThis.playSound("footstep", 0.33);
             }
         } else {
             // Current frame index from the array of frames on spritesheet

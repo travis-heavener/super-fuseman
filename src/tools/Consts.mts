@@ -16,7 +16,7 @@ export default Object.freeze({
     FUSEMAN_SPEED_PX_PER_SEC: 48,
 
     // The duration of each Fuse before blowing, in seconds
-    FUSE_TIMER_SEC: 3,
+    FUSE_TIMER_SEC: 2.5,
 
     // The duration of each Blast before disappearing, in seconds
     BLAST_TIMER_SEC: 0.5,
@@ -34,5 +34,8 @@ export default Object.freeze({
     },
 
     // The number of themes available in the spritesheet
-    NUM_THEMES: 1
+    NUM_THEMES: 1,
+
+    // The interval of time between the start of two footstep sound effects, in milliseconds
+    FOOTSTEP_SFX_INTERVAL_MS: 280
 });

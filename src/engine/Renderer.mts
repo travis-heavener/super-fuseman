@@ -168,6 +168,19 @@ export default class Renderer {
     }
 
     /**
+     * Renders once the page loads, requesting the user to press any key to start
+     */
+    initialRender() {
+        // Render frame
+        this.render();
+
+        // Render overlay prompt
+        this.ctx.drawImage(
+            this.textures.initPrompt, 0, 0, this.canvas.width, this.canvas.height
+        );
+    }
+
+    /**
      * Calls the draw method on each sprite
      */
     render() {
@@ -222,6 +235,7 @@ export default class Renderer {
     spawnBlast(fuse: Fuse, blastRadius: number): void {
         // Allow owner to place more fuses
         fuse.owner.incAvailFuses();
+        globalThis.playSound("explosion", 0.65);
 
         // Determine grid position
         const x = Math.floor(fuse.pos.x / 16);
