@@ -9,10 +9,10 @@ import Blast from "./Blast.mjs";
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
  */
-type MovementIntent = {
-    endPos: Point2,
-    isMoving: boolean,
-    isPlacingFuse: boolean
+type ActionIntent = {
+    type: "movement" | "placingFuse";
+    direction?: "left" | "right" | "down" | "up";
+    endPos?: Point2
 };
 
 /**
@@ -49,8 +49,8 @@ export default class Fuseman extends Sprite {
     // Timestamp of last animation frame update
     private lastAnimationFrameTimestamp: number;
 
-    // Stores the last movement intent pre-collision check for a tick
-    private currentIntent: MovementIntent;
+    // Stores current action intents pre-collision check per tick
+    private currentIntents: ActionIntent[];
 
     // Fuseman's stats including blast radius, number of fuses, etc.
     private stats: FusemanStats;
@@ -67,7 +67,7 @@ export default class Fuseman extends Sprite {
         // Reset animation flags
         this.animFrameIndex = this.lastAnimationFrameTimestamp = 0;
         this.isMoving = this.isDying = this.isDead = false;
-        this.currentIntent = {} as MovementIntent;
+        this.currentIntents = [] as ActionIntent[];
 
         // Init Fuseman stats
         this.stats = {} as FusemanStats;
@@ -174,12 +174,8 @@ export default class Fuseman extends Sprite {
     updateMovementIntent(dt: number): void {
         if (this.isDead) return;
 
-        this.currentIntent = {
-            "direction": "down", // Default pose
-            "endPos": new Point2(this.pos.x, this.pos.y),
-            "isMoving": false,
-            "isPlacingFuse": false
-        } as MovementIntent;
+        // Clear previous intents
+        this.currentIntents.length = 0;
 
         // Check for key press
         if (this.playerNumber === 1) {
@@ -189,27 +185,39 @@ export default class Fuseman extends Sprite {
                 switch (keysHeld[i]) {
                     case Consts.KEYS.LEFT: // Move left
                         if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
-                        this.currentIntent.isMoving = true;
-                        this.currentIntent.endPos.x -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        this.currentIntents.push({
+                            "type": "movement",
+                            "direction": "left",
+                            "endPos": this.pos.offset( -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 )
+                        });
                         break;
                     case Consts.KEYS.RIGHT: // Move right
                         if (keysHeld.includes( Consts.KEYS.LEFT )) break;
-                        this.currentIntent.isMoving = true;
-                        this.currentIntent.endPos.x += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        this.currentIntents.push({
+                            "type": "movement",
+                            "direction": "right",
+                            "endPos": this.pos.offset( Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 )
+                        });
                         break;
                     case Consts.KEYS.DOWN: // Move down
                         if (keysHeld.includes( Consts.KEYS.UP )) break;
-                        this.currentIntent.isMoving = true;
-                        this.currentIntent.endPos.y += Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        this.currentIntents.push({
+                            "type": "movement",
+                            "direction": "down",
+                            "endPos": this.pos.offset( 0, Consts.FUSEMAN_SPEED_PX_PER_SEC * dt )
+                        });
                         break;
                     case Consts.KEYS.UP: // Move up
                         if (keysHeld.includes( Consts.KEYS.DOWN )) break;
-                        this.currentIntent.isMoving = true;
-                        this.currentIntent.endPos.y -= Consts.FUSEMAN_SPEED_PX_PER_SEC * dt;
+                        this.currentIntents.push({
+                            "type": "movement",
+                            "direction": "up",
+                            "endPos": this.pos.offset( 0, -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt )
+                        });
                         break;
                     case Consts.KEYS.PLANT: // Plant fuse
                         if (this.stats.numAvailFuses === 0) break;
-                        this.currentIntent.isPlacingFuse = true;
+                        this.currentIntents.push({ "type": "placingFuse" });
                         break;
                 }
             }
@@ -222,26 +230,29 @@ export default class Fuseman extends Sprite {
     tick(dt: number, renderer: Renderer) {
         if (this.isDead || this.isDying) return;
 
-        // Handle updates from last intent
-        this.isMoving = this.currentIntent.isMoving;
-
-        // Move from last intent
-        if (this.isMoving) {
-            // Determine direction
-            if      (this.pos.y < this.currentIntent.endPos.y) this.direction = "down";
-            else if (this.pos.y > this.currentIntent.endPos.y) this.direction = "up";
-            else if (this.pos.x < this.currentIntent.endPos.x) this.direction = "right";
-            else if (this.pos.x > this.currentIntent.endPos.x) this.direction = "left";
-
-            this.pos.x = this.currentIntent.endPos.x;
-            this.pos.y = this.currentIntent.endPos.y;
+        // Verify there are intents
+        if (this.currentIntents.length === 0) {
+            this.direction = "down";
+            this.isMoving = false;
+            return;
         }
 
-        // Attempt to plant fuse
-        if (this.currentIntent.isPlacingFuse) {
-            const x = Math.round(this.pos.x / 16);
-            const y = Math.round(this.pos.y / 16);
-            renderer.attemptPlaceFuse(x, y, this, this.stats.blastRadius);
+        // Handle updates from current intents
+        for (const intent of this.currentIntents) {
+            this.isMoving = (intent.type === "movement");
+
+            // Move from last intent
+            if (intent.type === "movement") {
+                // Move Fuseman
+                this.direction = intent.direction!;
+                this.pos.x = intent.endPos!.x;
+                this.pos.y = intent.endPos!.y;
+            } else {
+                // Attempt to place fuse
+                const x = Math.round(this.pos.x / 16);
+                const y = Math.round(this.pos.y / 16);
+                renderer.attemptPlaceFuse(x, y, this, this.stats.blastRadius);
+            }
         }
     }
 
@@ -254,13 +265,12 @@ export default class Fuseman extends Sprite {
     /**
      * Returns the current bounds based on the movement intents
      */
-    getBounds(): Point2[] {
-        const { x, y } = this.currentIntent.endPos;
+    getBounds(center: Point2): Point2[] {
         return [
-            new Point2(x,      y),
-            new Point2(x + 16, y),
-            new Point2(x,      y + 16),
-            new Point2(x + 16, y + 16)
+            new Point2(center.x,      center.y),
+            new Point2(center.x + 16, center.y),
+            new Point2(center.x,      center.y + 16),
+            new Point2(center.x + 16, center.y + 16)
         ];
     }
 
@@ -269,11 +279,11 @@ export default class Fuseman extends Sprite {
      * 
      * Returns collided sprites in an array
      */
-    private getCollisions(renderer: Renderer): Sprite[] {
+    private getCollisions(intent: ActionIntent, renderer: Renderer): Sprite[] {
         // Get references to nearby objects
         const center = new Point2(
-            this.currentIntent.endPos.x + 8,
-            this.currentIntent.endPos.y + 8
+            intent.endPos!.x + 8,
+            intent.endPos!.y + 8
         );
         const nearbySprites: Sprite[] = [];
 
@@ -296,7 +306,7 @@ export default class Fuseman extends Sprite {
         }
 
         // Pre-compute bounds of this object
-        const bounds = this.getBounds();
+        const bounds = this.getBounds(intent.endPos!);
         const aLeft = bounds[0].x;
         const aRight = bounds[1].x;
         const aTop = bounds[0].y;
@@ -325,40 +335,93 @@ export default class Fuseman extends Sprite {
      * Resolves movement between colliding objects with this Fuseman, O(n) time
      */
     resolveCollisions(renderer: Renderer) {
-        // Temporarily override movement intent to check individual axes
-        const newEndPos = this.currentIntent.endPos.copy();
+        // Resolve for each intent
+        let hasResolvedMovementIntent = false;
+        for (let i = 0; i < this.currentIntents.length; ++i) {
+            const intent = this.currentIntents[i];
 
-        // Test x-axis (reset y-coordinate)
-        this.currentIntent.endPos.y = this.pos.y;
-        let collisions = this.getCollisions(renderer);
+            // Skip fuse placement intents
+            if (intent.type === "placingFuse") continue;
 
-        for (const sprite of collisions) {
-            if (sprite instanceof Tile) {
-                // Correct final x-coordinate
-                newEndPos.x = sprite.pos.x + (sprite.pos.x < newEndPos.x ? 16 : -16);
-            } else if (sprite instanceof Blast) {
-                this.startDeath();
-                return;
+            // Skip extra movements that predate latest valid movement (from held keys)
+            if (intent.type === "movement" && hasResolvedMovementIntent) {
+                this.currentIntents.splice(i, 1);
+                --i;
+                continue;
+            }
+
+            // Temporarily override movement intent to check individual axes
+            const newEndPos = intent.endPos!.copy();
+
+            // Test x-axis (reset y-coordinate)
+            intent.endPos!.y = this.pos.y;
+            let collisions = this.getCollisions(intent, renderer);
+
+            // Flip flag until proven otherwise
+            hasResolvedMovementIntent = true;
+
+            for (const sprite of collisions) {
+                if (sprite instanceof Tile) {
+                    // Check if attempting to fit in a gap/round a corner
+                    const tileX = Math.floor(sprite.pos.x / 16);
+                    const tileY = Math.floor(sprite.pos.y / 16);
+                    const gridSpaceBelow = (tileY + 1 < Consts.TILES_DOWN_EXTERIOR) ? renderer.getSpriteFromGrid(tileX, tileY + 1) : true;
+                    const gridSpaceAbove = (tileY - 1 >= 0) ? renderer.getSpriteFromGrid(tileX, tileY - 1) : true;
+
+                    // Check for gap below collided tile
+                    if ( intent.endPos!.y - sprite.pos.y >= 14 && gridSpaceBelow === null ) {
+                        newEndPos.y = sprite.pos.y + 16; // Fix alignment
+                    } else if ( sprite.pos.y - intent.endPos!.y >= 14 && gridSpaceAbove === null ) {
+                        newEndPos.y = sprite.pos.y - 16; // Fix alignment
+                    } else {
+                        // Correct final x-coordinate
+                        newEndPos.x = sprite.pos.x + (sprite.pos.x < newEndPos.x ? 16 : -16);
+                        hasResolvedMovementIntent = false;
+                    }
+                } else if (sprite instanceof Blast) {
+                    this.startDeath();
+                    return;
+                }
+            }
+
+            // Test y-axis (reset x-coordinate)
+            intent.endPos!.x = newEndPos.x;
+            intent.endPos!.y = newEndPos.y;
+            collisions = this.getCollisions(intent, renderer);
+
+            for (const sprite of collisions) {
+                if (sprite instanceof Tile) {
+                    // Check if attempting to fit in a gap/round a corner
+                    const tileX = Math.floor(sprite.pos.x / 16);
+                    const tileY = Math.floor(sprite.pos.y / 16);
+                    const gridSpaceRight = (tileX + 1 < Consts.TILES_ACROSS_EXTERIOR) ? renderer.getSpriteFromGrid(tileX + 1, tileY) : true;
+                    const gridSpaceLeft = (tileX - 1 >= 0) ? renderer.getSpriteFromGrid(tileX - 1, tileY) : true;
+
+                    // Check for gap below collided tile
+                    if ( intent.endPos!.x - sprite.pos.x >= 14 && gridSpaceRight === null ) {
+                        newEndPos.x = sprite.pos.x + 16; // Fix alignment
+                    } else if ( sprite.pos.x - intent.endPos!.x >= 14 && gridSpaceLeft === null ) {
+                        newEndPos.x = sprite.pos.x - 16; // Fix alignment
+                    } else {
+                        // Correct final y-coordinate
+                        newEndPos.y = sprite.pos.y + (sprite.pos.y < newEndPos.y ? 16 : -16);
+                        hasResolvedMovementIntent = false;
+                    }
+                } else if (sprite instanceof Blast) {
+                    this.startDeath();
+                    return;
+                }
+            }
+
+            // Otherwise, didn't die so correct position
+            intent.endPos!.x = Math.round(newEndPos.x);
+            intent.endPos!.y = Math.round(newEndPos.y);
+
+            // If this intent has failed due to collision, remove from intents
+            if (!hasResolvedMovementIntent) {
+                this.currentIntents.splice(i, 1);
+                --i;
             }
         }
-
-        // Test y-axis (reset x-coordinate)
-        this.currentIntent.endPos.x = newEndPos.x;
-        this.currentIntent.endPos.y = newEndPos.y;
-        collisions = this.getCollisions(renderer);
-
-        for (const sprite of collisions) {
-            if (sprite instanceof Tile) {
-                // Correct final y-coordinate
-                newEndPos.y = sprite.pos.y + (sprite.pos.y < newEndPos.y ? 16 : -16);
-            } else if (sprite instanceof Blast) {
-                this.startDeath();
-                return;
-            }
-        }
-
-        // Otherwise, didn't die so correct position
-        this.currentIntent.endPos.x = Math.round(newEndPos.x);
-        this.currentIntent.endPos.y = Math.round(newEndPos.y);
     }
 };

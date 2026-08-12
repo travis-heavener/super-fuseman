@@ -42,5 +42,5 @@ export default abstract class Sprite {
      * 
      * Format: [top-left, top-right, bottom-left, bottom-right]
      */
-    abstract getBounds(): Point2[];
+    abstract getBounds(center?: Point2): Point2[];
 };
