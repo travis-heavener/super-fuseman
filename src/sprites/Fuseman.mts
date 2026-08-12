@@ -195,7 +195,7 @@ export default class Fuseman extends Sprite {
      * Checks for movement intent before checking collisions or moving
      */
     updateMovementIntent(dt: number): void {
-        if (this.isDead) return;
+        if (this.isDead || this.isDying) return;
 
         // Clear previous intents
         this.currentIntents.length = 0;
@@ -365,6 +365,8 @@ export default class Fuseman extends Sprite {
      * Resolves movement between colliding objects with this Fuseman, O(n) time
      */
     resolveCollisions(renderer: Renderer) {
+        if (this.isDead || this.isDying) return;
+
         // Remove old forced directions or if the direction is no longer in the intents
         if ( this.forcedDirection &&
             (this.forcedDirection!.timestamp + 100 < Date.now() ||
