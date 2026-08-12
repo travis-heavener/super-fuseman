@@ -5,6 +5,7 @@ import Textures from "../engine/Textures.mjs";
 import Renderer from "../engine/Renderer.mjs";
 import Tile from "./Tile.mjs";
 import Blast from "./Blast.mjs";
+import Fuse from "./Fuse.mjs";
 
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
@@ -12,7 +13,7 @@ import Blast from "./Blast.mjs";
 type ActionIntent = {
     type: "movement" | "placingFuse";
     direction?: "left" | "right" | "down" | "up";
-    endPos?: Point2
+    endPos?: Point2;
 };
 
 /**
@@ -168,7 +169,7 @@ export default class Fuseman extends Sprite {
         }
     }
 
-/**
+    /**
      * Checks for movement intent before checking collisions or moving
      */
     updateMovementIntent(dt: number): void {
@@ -227,7 +228,7 @@ export default class Fuseman extends Sprite {
     /**
      * Updates the Fuseman's position, including processing any key input
      */
-    tick(dt: number, renderer: Renderer) {
+    tick(renderer: Renderer) {
         if (this.isDead || this.isDying) return;
 
         // Verify there are intents
@@ -265,12 +266,12 @@ export default class Fuseman extends Sprite {
     /**
      * Returns the current bounds based on the movement intents
      */
-    getBounds(center: Point2): Point2[] {
+    getBounds(pos: Point2): Point2[] {
         return [
-            new Point2(center.x,      center.y),
-            new Point2(center.x + 16, center.y),
-            new Point2(center.x,      center.y + 16),
-            new Point2(center.x + 16, center.y + 16)
+            new Point2(pos.x,      pos.y),
+            new Point2(pos.x + 16, pos.y),
+            new Point2(pos.x,      pos.y + 16),
+            new Point2(pos.x + 16, pos.y + 16)
         ];
     }
 
@@ -279,34 +280,37 @@ export default class Fuseman extends Sprite {
      * 
      * Returns collided sprites in an array
      */
-    private getCollisions(intent: ActionIntent, renderer: Renderer): Sprite[] {
+    private getCollisions(pos: Point2, renderer: Renderer): Sprite[] {
         // Get references to nearby objects
-        const center = new Point2(
-            intent.endPos!.x + 8,
-            intent.endPos!.y + 8
-        );
+        const center = new Point2(pos.x + 8, pos.y + 8);
         const nearbySprites: Sprite[] = [];
 
         // Determine grid coordinates
         const x = Math.floor(center.x / 16);
         const y = Math.floor(center.y / 16);
 
-        for (let xo = x - 1; xo <= x + 1; ++xo) {
-            for (let yo = y - 1; yo <= y + 1; ++yo) {
+        for (let dx = -1; dx <= 1; ++dx) {
+            for (let dy = -1; dy <= 1; ++dy) {
                 // Skip out of bounds
-                if (xo < 0 || xo >= Consts.TILES_ACROSS_EXTERIOR ||
-                    yo < 0 || yo >= Consts.TILES_DOWN_EXTERIOR) {
+                if (x + dx < 0 || x + dx >= Consts.TILES_ACROSS_EXTERIOR ||
+                    y + dy < 0 || y + dy >= Consts.TILES_DOWN_EXTERIOR) {
                     continue;
                 }
 
                 // Lookup sprite
-                const sprite: Sprite | null = renderer.getSpriteFromGrid( xo, yo );
-                if (sprite) nearbySprites.push(sprite);
+                const sprite: Sprite | null = renderer.getSpriteFromGrid( x + dx, y + dy );
+                if (sprite === null) continue;
+
+                // If there's a Fuse on this position, ignore it
+                if (dx === 0 && dy === 0 && sprite instanceof Fuse) continue;
+
+                // Otherwise, append sprite
+                nearbySprites.push(sprite);
             }
         }
 
         // Pre-compute bounds of this object
-        const bounds = this.getBounds(intent.endPos!);
+        const bounds = this.getBounds(pos);
         const aLeft = bounds[0].x;
         const aRight = bounds[1].x;
         const aTop = bounds[0].y;
@@ -335,6 +339,18 @@ export default class Fuseman extends Sprite {
      * Resolves movement between colliding objects with this Fuseman, O(n) time
      */
     resolveCollisions(renderer: Renderer) {
+        // If there are no movement intents, just check for blast collisions
+        if ( !this.currentIntents.some(i => i.type === "movement") ) {
+            const collisions = this.getCollisions(this.pos.copy(), renderer);
+            if ( collisions.some(sprite => sprite instanceof Blast) ) {
+                this.startDeath();
+                return;
+            }
+
+            // Regardless, ignore checks for other intents
+            return;
+        }
+
         // Resolve for each intent
         let hasResolvedMovementIntent = false;
         for (let i = 0; i < this.currentIntents.length; ++i) {
@@ -345,8 +361,7 @@ export default class Fuseman extends Sprite {
 
             // Skip extra movements that predate latest valid movement (from held keys)
             if (intent.type === "movement" && hasResolvedMovementIntent) {
-                this.currentIntents.splice(i, 1);
-                --i;
+                this.currentIntents.splice(i--, 1);
                 continue;
             }
 
@@ -355,13 +370,13 @@ export default class Fuseman extends Sprite {
 
             // Test x-axis (reset y-coordinate)
             intent.endPos!.y = this.pos.y;
-            let collisions = this.getCollisions(intent, renderer);
+            let collisions = this.getCollisions(intent.endPos!, renderer);
 
             // Flip flag until proven otherwise
             hasResolvedMovementIntent = true;
 
             for (const sprite of collisions) {
-                if (sprite instanceof Tile) {
+                if (sprite instanceof Tile || sprite instanceof Fuse) {
                     // Check if attempting to fit in a gap/round a corner
                     const tileX = Math.floor(sprite.pos.x / 16);
                     const tileY = Math.floor(sprite.pos.y / 16);
@@ -373,8 +388,9 @@ export default class Fuseman extends Sprite {
                         newEndPos.y = sprite.pos.y + 16; // Fix alignment
                     } else if ( sprite.pos.y - intent.endPos!.y >= 14 && gridSpaceAbove === null ) {
                         newEndPos.y = sprite.pos.y - 16; // Fix alignment
-                    } else {
-                        // Correct final x-coordinate
+                    } else if ((sprite.pos.x < newEndPos.x && intent.direction === "left") ||
+                        (sprite.pos.x > newEndPos.x && intent.direction === "right")
+                    ) { // Correct final x-coordinate if not moving away from obstacle
                         newEndPos.x = sprite.pos.x + (sprite.pos.x < newEndPos.x ? 16 : -16);
                         hasResolvedMovementIntent = false;
                     }
@@ -387,10 +403,10 @@ export default class Fuseman extends Sprite {
             // Test y-axis (reset x-coordinate)
             intent.endPos!.x = newEndPos.x;
             intent.endPos!.y = newEndPos.y;
-            collisions = this.getCollisions(intent, renderer);
+            collisions = this.getCollisions(intent.endPos!, renderer);
 
             for (const sprite of collisions) {
-                if (sprite instanceof Tile) {
+                if (sprite instanceof Tile || sprite instanceof Fuse) {
                     // Check if attempting to fit in a gap/round a corner
                     const tileX = Math.floor(sprite.pos.x / 16);
                     const tileY = Math.floor(sprite.pos.y / 16);
@@ -402,8 +418,9 @@ export default class Fuseman extends Sprite {
                         newEndPos.x = sprite.pos.x + 16; // Fix alignment
                     } else if ( sprite.pos.x - intent.endPos!.x >= 14 && gridSpaceLeft === null ) {
                         newEndPos.x = sprite.pos.x - 16; // Fix alignment
-                    } else {
-                        // Correct final y-coordinate
+                    } else if ((sprite.pos.y < newEndPos.y && intent.direction === "up") ||
+                        (sprite.pos.y > newEndPos.y && intent.direction === "down")
+                    ) { // Correct final y-coordinate if not moving away from obstacle
                         newEndPos.y = sprite.pos.y + (sprite.pos.y < newEndPos.y ? 16 : -16);
                         hasResolvedMovementIntent = false;
                     }
@@ -418,10 +435,7 @@ export default class Fuseman extends Sprite {
             intent.endPos!.y = Math.round(newEndPos.y);
 
             // If this intent has failed due to collision, remove from intents
-            if (!hasResolvedMovementIntent) {
-                this.currentIntents.splice(i, 1);
-                --i;
-            }
+            if (!hasResolvedMovementIntent) this.currentIntents.splice(i--, 1);
         }
     }
 };

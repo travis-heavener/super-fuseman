@@ -161,7 +161,7 @@ export default class Renderer {
         this.fusers.forEach(fuseman => fuseman.resolveCollisions(this));
 
         // 3A. Update Fuser positions & execute actions
-        this.fusers.forEach(f => f.tick(dt, this));
+        this.fusers.forEach(f => f.tick(this));
 
         // 3B. Update mutable tiles & other tickables
         this.mutableTiles.forEach(mt => mt.tick(dt, this));
