@@ -28,7 +28,8 @@ type TileSpriteMap = {
         "center": number[],
         "middle": number[],
         "end": number[]
-    }
+    },
+    "collectible": number[]
 };
 
 // Base path to resource files
@@ -141,6 +142,13 @@ export default class Textures {
                     tiles.frames.length - 2,
                     tiles.frames.length - 1
                 ]);
+            }
+
+            // Load collectible textures
+            tiles.collectible = [];
+            for (let i = 0; i < 4; ++i) {
+                tiles.frames.push( await createImageBitmap( tilesSpritesheet, i * 16, 64, 16, 16 ) );
+                tiles.collectible.push( tiles.frames.length - 1 );
             }
 
             // Load fuse textures

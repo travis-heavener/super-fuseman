@@ -24,6 +24,15 @@ export default Object.freeze({
     // The duration of each MutableTile's destruction animation before disappearing, in seconds
     TILE_CRUMBLE_TIMER_SEC: 0.05,
 
+    // The duration of each Collectible's destruction animation before disappearing, in seconds
+    COLLECTIBLE_DESTROY_TIMER_SEC: 0.25,
+
+    // The odds that a Collectible spawns when a MutableTile breaks
+    COLLECTIBLE_SPAWN_RATE: 0.5,
+
+    // How long a mystery Collectible power-up lasts, in seconds
+    MYSTERY_COLLECTIBLE_TIMER_SEC: 20,
+
     // Default key mappings for Fuseman
     KEYS: {
         LEFT: "KeyA",

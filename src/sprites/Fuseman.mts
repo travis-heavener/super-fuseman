@@ -6,6 +6,7 @@ import Renderer from "../engine/Renderer.mjs";
 import Tile from "./Tile.mjs";
 import Blast from "./Blast.mjs";
 import Fuse from "./Fuse.mjs";
+import Collectible, { Variant } from "./Collectible.mjs";
 
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
@@ -15,6 +16,7 @@ type ActionIntent = {
     direction?: "left" | "right" | "down" | "up";
     endPos?: Point2;
     isAdjusted?: boolean;
+    collidedCollectible?: Collectible;
 };
 
 /**
@@ -23,6 +25,14 @@ type ActionIntent = {
 type ForcedDirection = {
     direction: "left" | "right" | "down" | "up";
     timestamp: number;
+};
+
+/**
+ * Used to handle mystery power-ups from collectibles
+ */
+type MysteryPowerUp = {
+    timer: number;
+    variant: Variant;
 };
 
 /**
@@ -71,6 +81,9 @@ export default class Fuseman extends Sprite {
     // Fuseman's stats including blast radius, number of fuses, etc.
     private stats: FusemanStats;
 
+    // Stores the current mystery power-ups
+    private currentMysteryPowerUp: MysteryPowerUp | null;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -83,7 +96,7 @@ export default class Fuseman extends Sprite {
         // Reset animation flags
         this.animFrameIndex = this.lastAnimationFrameTimestamp = this.lastFootstepSFXTimestamp = 0;
         this.isMoving = this.isDying = this.isDead = false;
-        this.currentIntents = [] as ActionIntent[];
+        this.currentIntents = [];
         this.forcedDirection = null;
 
         // Init Fuseman stats
@@ -93,6 +106,7 @@ export default class Fuseman extends Sprite {
             "numTotalFuses": 1,
             "numAvailFuses": 1
         } as FusemanStats);
+        this.currentMysteryPowerUp = null;
 
         // Disable opacity
         super.disableOpaqueness();
@@ -201,50 +215,60 @@ export default class Fuseman extends Sprite {
         // Clear previous intents
         this.currentIntents.length = 0;
 
+        // Determine power-up modifier
+        const powerupModifier = (this.currentMysteryPowerUp?.variant === Variant.SPEED_BOOST) ? 3 : 1;
+        const isFlippedControls = this.currentMysteryPowerUp?.variant === Variant.FLIPPED_CONTROLS;
+        const keyBinds = {
+            "LEFT": !isFlippedControls ? Consts.KEYS.LEFT : Consts.KEYS.RIGHT,
+            "RIGHT": !isFlippedControls ? Consts.KEYS.RIGHT : Consts.KEYS.LEFT,
+            "UP": !isFlippedControls ? Consts.KEYS.UP : Consts.KEYS.DOWN,
+            "DOWN": !isFlippedControls ? Consts.KEYS.DOWN : Consts.KEYS.UP
+        };
+
         // Check for key press
         if (this.playerNumber === 1) {
             // Lock currently held keys & look for most recently pressed movement key
             const keysHeld = [...globalThis.keysHeld];
             for (const key of keysHeld) {
                 switch (key) {
-                    case Consts.KEYS.LEFT: // Move left
-                        if (keysHeld.includes( Consts.KEYS.RIGHT )) break;
+                    case keyBinds.LEFT: // Move left
+                        if (keysHeld.includes( keyBinds.RIGHT )) break;
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "left",
-                            "endPos": this.pos.offset( -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
+                            "endPos": this.pos.offset( powerupModifier * -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
                             "isAdjusted": false
                         });
                         break;
-                    case Consts.KEYS.RIGHT: // Move right
-                        if (keysHeld.includes( Consts.KEYS.LEFT )) break;
+                    case keyBinds.RIGHT: // Move right
+                        if (keysHeld.includes( keyBinds.LEFT )) break;
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "right",
-                            "endPos": this.pos.offset( Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
+                            "endPos": this.pos.offset( powerupModifier * Consts.FUSEMAN_SPEED_PX_PER_SEC * dt, 0 ),
                             "isAdjusted": false
                         });
                         break;
-                    case Consts.KEYS.DOWN: // Move down
-                        if (keysHeld.includes( Consts.KEYS.UP )) break;
+                    case keyBinds.DOWN: // Move down
+                        if (keysHeld.includes( keyBinds.UP )) break;
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "down",
-                            "endPos": this.pos.offset( 0, Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
+                            "endPos": this.pos.offset( 0, powerupModifier * Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
                             "isAdjusted": false
                         });
                         break;
-                    case Consts.KEYS.UP: // Move up
-                        if (keysHeld.includes( Consts.KEYS.DOWN )) break;
+                    case keyBinds.UP: // Move up
+                        if (keysHeld.includes( keyBinds.DOWN )) break;
                         this.currentIntents.push({
                             "type": "movement",
                             "direction": "up",
-                            "endPos": this.pos.offset( 0, -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
+                            "endPos": this.pos.offset( 0, powerupModifier * -Consts.FUSEMAN_SPEED_PX_PER_SEC * dt ),
                             "isAdjusted": false
                         });
                         break;
                     case Consts.KEYS.PLANT: // Plant fuse
-                        if (this.stats.numAvailFuses === 0) break;
+                        if (this.stats.numAvailFuses === 0 || this.currentMysteryPowerUp?.variant === Variant.NO_FUSES) break;
                         this.currentIntents.push({ "type": "placingFuse", "isAdjusted": false });
                         break;
                 }
@@ -255,8 +279,14 @@ export default class Fuseman extends Sprite {
     /**
      * Updates the Fuseman's position, including processing any key input
      */
-    tick(renderer: Renderer) {
+    tick(dt: number, renderer: Renderer) {
         if (this.isDead || this.isDying) return;
+
+        // Update current power-up timer
+        if (this.currentMysteryPowerUp) {
+            if (this.currentMysteryPowerUp.timer <= 0) this.currentMysteryPowerUp = null;
+            else this.currentMysteryPowerUp.timer -= dt;
+        }
 
         // Verify there are intents
         if (this.currentIntents.length === 0) {
@@ -275,11 +305,36 @@ export default class Fuseman extends Sprite {
                 this.direction = intent.direction!;
                 this.pos.x = intent.endPos!.x;
                 this.pos.y = intent.endPos!.y;
+
+                // Check for collectible
+                if (intent.collidedCollectible) {
+                    const collectible = intent.collidedCollectible as Collectible;
+                    if (collectible.isCollectible()) { // If not being destroyed
+                        // Apply buff/power-up
+                        switch (collectible.variant) {
+                            case Variant.EXTRA_FUSE:
+                                ++this.stats.numTotalFuses;
+                                ++this.stats.numAvailFuses;
+                                break;
+                            case Variant.LARGER_BLASTS: ++this.stats.blastRadius; break;
+                            default:
+                                this.currentMysteryPowerUp = {
+                                    "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
+                                    "variant": collectible.variant
+                                };
+                                break;
+                        }
+
+                        // Remove collectible
+                        renderer.removeCollectible(collectible);
+                    }
+                }
             } else {
                 // Attempt to place fuse
                 const x = Math.round(this.pos.x / 16);
                 const y = Math.round(this.pos.y / 16);
-                renderer.attemptPlaceFuse(x, y, this, this.stats.blastRadius);
+                const blastRadius = this.currentMysteryPowerUp?.variant === Variant.SMALL_BLASTS ? 1 : this.stats.blastRadius;
+                renderer.attemptPlaceFuse(x, y, this, blastRadius);
             }
         }
     }
@@ -435,6 +490,8 @@ export default class Fuseman extends Sprite {
                 } else if (sprite instanceof Blast) {
                     this.startDeath();
                     return;
+                } else if (sprite instanceof Collectible) {
+                    intent.collidedCollectible = sprite;
                 }
             }
 
@@ -467,6 +524,8 @@ export default class Fuseman extends Sprite {
                 } else if (sprite instanceof Blast) {
                     this.startDeath();
                     return;
+                } else if (sprite instanceof Collectible) {
+                    intent.collidedCollectible = sprite;
                 }
             }
 

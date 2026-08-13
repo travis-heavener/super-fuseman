@@ -1,5 +1,6 @@
 import Consts from "../tools/Consts.mjs";
 import Blast from "../sprites/Blast.mjs";
+import Collectible from "../sprites/Collectible.mjs";
 import Fuse from "../sprites/Fuse.mjs";
 import Fuseman from "../sprites/Fuseman.mjs";
 import Textures from "./Textures.mjs";
@@ -18,6 +19,7 @@ export default class Renderer {
     private mutableTiles: MutableTile[];
     private fuses: Fuse[];
     private blasts: Blast[];
+    private collectibles: Collectible[];
     private grid: (Sprite | null)[][];
 
     private textures: Textures;
@@ -31,6 +33,7 @@ export default class Renderer {
         this.mutableTiles = [];
         this.fuses = [];
         this.blasts = [];
+        this.collectibles = [];
 
         this.canvas = document.getElementsByTagName("canvas")[0];
         this.ctx = this.canvas.getContext("2d") as any;
@@ -154,17 +157,15 @@ export default class Renderer {
         this.fuses.forEach(fuse => fuse.tick(dt, this));
         this.blasts.forEach(blast => blast.tick(dt, this));
 
-        // 2A. Check for blast collisions
-        // TODO - check for collisions between blasts and fusers/mutable tiles/items/fuses (everything but other blasts and immutable tiles)
-
-        // 2B. Check for Fuser collisions
+        // 2A. Check for Fuser collisions
         this.fusers.forEach(fuseman => fuseman.resolveCollisions(this));
 
         // 3A. Update Fuser positions & execute actions
-        this.fusers.forEach(f => f.tick(this));
+        this.fusers.forEach(f => f.tick(dt, this));
 
         // 3B. Update mutable tiles & other tickables
         this.mutableTiles.forEach(mt => mt.tick(dt, this));
+        this.collectibles.forEach(c => c.tick(dt, this));
     }
 
     /**
@@ -206,9 +207,10 @@ export default class Renderer {
             }
         }
 
-        // Draw Fuses & Blasts beneath Fuserman
+        // Draw Fuses, Blasts, and Collectibles beneath Fuserman
         this.fuses.forEach(fuse => fuse.draw(this.ctx, this.textures));
         this.blasts.forEach(blasts => blasts.draw(this.ctx, this.textures));
+        this.collectibles.forEach(collectible => collectible.draw(this.ctx, this.textures));
 
         // Draw Fusers overtop (backwards so player 1 is atop player 2, etc.)
         this.fusers.toReversed().forEach(f => f.draw(this.ctx, this.textures));
@@ -253,78 +255,58 @@ export default class Renderer {
             this.grid[x][y] = new Blast( new Point2(x * 16, y * 16), "center", 0 )
         );
 
-        // Spread left
-        for (let i = 1; i <= blastRadius; ++i) {
-            if (x - i <= 0) break;
-            if (this.grid[x - i][y] instanceof MutableTile) {
-                (this.grid[x - i][y] as MutableTile).destroy();
-                break;
-            } else if (this.grid[x - i][y]) {
-                break;
+        // Helper for ending blast searching, returns true if the blast can keep spreading
+        const spreadToGridPos = (x: number, y: number): boolean => {
+            if (this.grid[x][y] instanceof MutableTile) {
+                (this.grid[x][y] as MutableTile).destroy();
+                return false;
+            } else if (this.grid[x][y] instanceof Collectible) {
+                (this.grid[x][y] as Collectible).destroy();
+                return false;
+            } else if (this.grid[x][y]) {
+                return false;
             }
 
+            // Otherwise, spot is valid
+            return true;
+        };
+
+        // Spread left
+        for (let i = 1; i <= blastRadius; ++i) {
+            if (x - i <= 0 || !spreadToGridPos(x - i, y)) break;
             this.blasts.push(
                 this.grid[x - i][y] = new Blast(
-                    new Point2( (x - i) * 16, y * 16 ),
-                    (i === blastRadius) ? "end" : "middle",
-                    90
+                    new Point2( (x - i) * 16, y * 16 ), (i === blastRadius) ? "end" : "middle", 90
                 )
             );
         }
 
         // Spread right
         for (let i = 1; i <= blastRadius; ++i) {
-            if (x + i + 1 === Consts.TILES_ACROSS_EXTERIOR) break;
-            if (this.grid[x + i][y] instanceof MutableTile) {
-                (this.grid[x + i][y] as MutableTile).destroy();
-                break;
-            } else if (this.grid[x + i][y]) {
-                break;
-            }
-
+            if (x + i + 1 === Consts.TILES_ACROSS_EXTERIOR || !spreadToGridPos(x + i, y)) break;
             this.blasts.push(
                 this.grid[x + i][y] = new Blast(
-                    new Point2( (x + i) * 16, y * 16 ),
-                    (i === blastRadius) ? "end" : "middle",
-                    270
+                    new Point2( (x + i) * 16, y * 16 ), (i === blastRadius) ? "end" : "middle", 270
                 )
             );
         }
 
         // Spread up
         for (let i = 1; i <= blastRadius; ++i) {
-            if (y - i <= 0) break;
-            if (this.grid[x][y - i] instanceof MutableTile) {
-                (this.grid[x][y - i] as MutableTile).destroy();
-                break;
-            } else if (this.grid[x][y - i]) {
-                break;
-            }
-
+            if (y - i <= 0 || !spreadToGridPos(x, y - i)) break;
             this.blasts.push(
                 this.grid[x][y - i] = new Blast(
-                    new Point2( x * 16, (y - i) * 16 ),
-                    (i === blastRadius) ? "end" : "middle",
-                    180
+                    new Point2( x * 16, (y - i) * 16 ), (i === blastRadius) ? "end" : "middle", 180
                 )
             );
         }
 
         // Spread down
         for (let i = 1; i <= blastRadius; ++i) {
-            if (y + i + 1 === Consts.TILES_DOWN_EXTERIOR) break;
-            if (this.grid[x][y + i] instanceof MutableTile) {
-                (this.grid[x][y + i] as MutableTile).destroy();
-                break;
-            } else if (this.grid[x][y + i]) {
-                break;
-            }
-
+            if (y + i + 1 === Consts.TILES_DOWN_EXTERIOR || !spreadToGridPos(x, y + i)) break;
             this.blasts.push(
                 this.grid[x][y + i] = new Blast(
-                    new Point2( x * 16, (y + i) * 16 ),
-                    (i === blastRadius) ? "end" : "middle",
-                    0
+                    new Point2( x * 16, (y + i) * 16 ), (i === blastRadius) ? "end" : "middle", 0
                 )
             );
         }
@@ -348,6 +330,30 @@ export default class Renderer {
         const y = Math.floor(mutableTile.pos.y / 16);
         this.grid[x][y] = null;
         this.mutableTiles.splice( this.mutableTiles.indexOf(mutableTile), 1 );
+    }
+
+    /**
+     * Removes a collectible from the grid & array
+     */
+    removeCollectible(collectible: Collectible) {
+        const x = Math.floor(collectible.pos.x / 16);
+        const y = Math.floor(collectible.pos.y / 16);
+        this.grid[x][y] = null;
+        this.collectibles.splice( this.collectibles.indexOf(collectible), 1 );
+    }
+
+    /**
+     * Replaces a mutable tile with a collectible
+     */
+    generateCollectibleAtTile(mutableTile: MutableTile) {
+        // Remove mutable tile
+        const pos = mutableTile.pos.copy();
+        const x = Math.floor(mutableTile.pos.x / 16);
+        const y = Math.floor(mutableTile.pos.y / 16);
+        this.mutableTiles.splice( this.mutableTiles.indexOf(mutableTile), 1 );
+
+        // Replace with a collectible
+        this.collectibles.push( this.grid[x][y] = new Collectible( pos ) );
     }
 
     /**

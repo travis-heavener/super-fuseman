@@ -11,9 +11,13 @@ export default class MutableTile extends Tile {
     // How much time is left before the MutableTile disappears, or -Infinity if not started
     private timer: number;
 
+    // Whether or not to create a Collectible and destroy self on next tick
+    private spawnCollectibleOnNextTick: boolean;
+
     constructor(pos: Point2, themeIndex: number) {
         super(pos, themeIndex);
         this.timer = -Infinity;
+        this.spawnCollectibleOnNextTick = false;
     }
 
     draw(ctx: CanvasRenderingContext2D, textures: Textures) {
@@ -40,17 +44,30 @@ export default class MutableTile extends Tile {
      */
     tick(dt: number, renderer: Renderer) {
         // Check if this is destroyed
-        if (this.timer <= 0 && isFinite(this.timer)) {
+        if (this.spawnCollectibleOnNextTick) {
+            // Generate Collectible
+            renderer.generateCollectibleAtTile(this);
+            return;
+        } else if (this.timer <= 0 && isFinite(this.timer)) {
             renderer.removeMutableTile(this);
             return;
+        } else if (isFinite(this.timer)) {
+            this.timer -= dt;
         }
-        this.timer -= dt;
     }
 
     /**
      * Marks the current tile to be destroyed after a short animation
      */
     destroy() {
+        // Determine whether or not to spawn a Collectible
+        if (Math.random() < Consts.COLLECTIBLE_SPAWN_RATE) {
+            // Mark for Collectible spawn on next tick
+            this.spawnCollectibleOnNextTick = true;
+            return;
+        }
+
+        // Otherwise, draw crumble animation
         this.timer = Consts.TILE_CRUMBLE_TIMER_SEC;
 
         // Disable opaqueness to paint background beneath
