@@ -18,6 +18,7 @@ export default class SoundManager {
         const sm = new SoundManager();
         await sm.loadSound("footstep", resPath + "/sfx/footstep.wav");
         await sm.loadSound("explosion", resPath + "/sfx/explosion.wav");
+        await sm.loadSound("death", resPath + "/sfx/death.wav");
 
         // Return new SoundManager
         return sm;

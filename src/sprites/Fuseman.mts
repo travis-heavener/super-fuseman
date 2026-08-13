@@ -105,6 +105,7 @@ export default class Fuseman extends Sprite {
         this.isDying = true;
         this.isMoving = false;
         this.animFrameIndex = 0;
+        globalThis.playSound("death", 0.65);
     }
 
     /**
