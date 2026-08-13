@@ -227,6 +227,7 @@ export default class Renderer {
         this.fuses.push(fuse);
         this.grid[x][y] = fuse;
         owner.decAvailFuses();
+        globalThis.playSound("place_fuse", 0.8);
     }
 
     /**
