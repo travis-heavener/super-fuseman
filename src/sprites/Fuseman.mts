@@ -179,7 +179,7 @@ export default class Fuseman extends Sprite {
             // Play footstep sound, if needed
             if (Date.now() - this.lastFootstepSFXTimestamp > Consts.FOOTSTEP_SFX_INTERVAL_MS) {
                 this.lastFootstepSFXTimestamp = Date.now();
-                globalThis.playSound("footstep", 0.33);
+                globalThis.playSound("footstep", 0.4);
             }
         } else {
             // Current frame index from the array of frames on spritesheet
