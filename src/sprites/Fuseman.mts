@@ -84,6 +84,9 @@ export default class Fuseman extends Sprite {
     // Stores the current mystery power-ups
     private currentMysteryPowerUp: MysteryPowerUp | null;
 
+    // Whether or not to ignore spammed fuse plant requests from keyboard
+    private isIgnoringHeldFusePlants: boolean;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -95,7 +98,7 @@ export default class Fuseman extends Sprite {
 
         // Reset animation flags
         this.animFrameIndex = this.lastAnimationFrameTimestamp = this.lastFootstepSFXTimestamp = 0;
-        this.isMoving = this.isDying = this.isDead = false;
+        this.isMoving = this.isDying = this.isDead = this.isIgnoringHeldFusePlants = false;
         this.currentIntents = [];
         this.forcedDirection = null;
 
@@ -229,6 +232,7 @@ export default class Fuseman extends Sprite {
         if (this.playerNumber === 1) {
             // Lock currently held keys & look for most recently pressed movement key
             const keysHeld = [...globalThis.keysHeld];
+            let hasAttemptedFusePlant = false;
             for (const key of keysHeld) {
                 switch (key) {
                     case keyBinds.LEFT: // Move left
@@ -268,11 +272,17 @@ export default class Fuseman extends Sprite {
                         });
                         break;
                     case Consts.KEYS.PLANT: // Plant fuse
-                        if (this.stats.numAvailFuses === 0 || this.currentMysteryPowerUp?.variant === Variant.NO_FUSES) break;
+                        hasAttemptedFusePlant = true;
+                        if (this.isIgnoringHeldFusePlants || this.stats.numAvailFuses === 0
+                            || this.currentMysteryPowerUp?.variant === Variant.NO_FUSES) break;
                         this.currentIntents.push({ "type": "placingFuse", "isAdjusted": false });
+                        this.isIgnoringHeldFusePlants = true;
                         break;
                 }
             }
+
+            // Stop ignoring fuse plants if key is no longer held
+            if (this.isIgnoringHeldFusePlants && !hasAttemptedFusePlant) this.isIgnoringHeldFusePlants = false;
         }
     }
 
