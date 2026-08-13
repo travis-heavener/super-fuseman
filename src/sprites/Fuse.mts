@@ -78,10 +78,10 @@ export default class Fuse extends Sprite {
     }
 
     /**
-     * Triggers an immediate blast (if chained from another blast) by zeroing the timer
+     * Triggers an immediate blast (if chained from another blast) by decreasing the timer
      */
     triggerBlast() {
-        this.timer = 0;
+        this.timer = Math.min(Consts.FUSE_CHAIN_DELAY_SEC, this.timer);
     }
 
     /**

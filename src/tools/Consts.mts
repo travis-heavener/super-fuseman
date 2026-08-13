@@ -18,6 +18,9 @@ export default Object.freeze({
     // The duration of each Fuse before blowing, in seconds
     FUSE_TIMER_SEC: 2.5,
 
+    // Delay in chained Fuse detonation, in seconds (overridden if Fuse timer is less than this)
+    FUSE_CHAIN_DELAY_SEC: 0.1,
+
     // The duration of each Blast before disappearing, in seconds
     BLAST_TIMER_SEC: 0.5,
 

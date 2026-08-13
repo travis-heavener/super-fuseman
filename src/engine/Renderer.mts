@@ -263,6 +263,9 @@ export default class Renderer {
             } else if (this.grid[x][y] instanceof Collectible) {
                 (this.grid[x][y] as Collectible).destroy();
                 return false;
+            } else if (this.grid[x][y] instanceof Fuse) {
+                (this.grid[x][y] as Fuse).triggerBlast();
+                return false;
             } else if (this.grid[x][y]) {
                 return false;
             }
