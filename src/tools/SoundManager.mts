@@ -20,6 +20,8 @@ export default class SoundManager {
         await sm.loadSound("explosion", resPath + "/sfx/explosion.wav");
         await sm.loadSound("death", resPath + "/sfx/death.wav");
         await sm.loadSound("place_fuse", resPath + "/sfx/place_fuse.wav");
+        await sm.loadSound("collectible", resPath + "/sfx/collectible.wav");
+        await sm.loadSound("powerup", resPath + "/sfx/powerup.wav");
 
         // Return new SoundManager
         return sm;
@@ -34,6 +36,20 @@ export default class SoundManager {
             key,
             await this.ctx.decodeAudioData( await res.arrayBuffer() )
         );
+    }
+
+    /**
+     * Suspends the audio context, freezing any sound effects mid-playback (used when pausing)
+     */
+    suspend() {
+        if (this.ctx.state === "running") this.ctx.suspend();
+    }
+
+    /**
+     * Resumes the audio context after being suspended
+     */
+    resume() {
+        if (this.ctx.state === "suspended") this.ctx.resume();
     }
 
     /**

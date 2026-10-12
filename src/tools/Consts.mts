@@ -49,5 +49,17 @@ export default Object.freeze({
     NUM_THEMES: 1,
 
     // The interval of time between the start of two footstep sound effects, in milliseconds
-    FOOTSTEP_SFX_INTERVAL_MS: 280
+    FOOTSTEP_SFX_INTERVAL_MS: 280,
+
+    // The fraction of the D-pad's half-width (from its center) a touch must travel to register a direction
+    DPAD_DEADZONE: 0.2,
+
+    // Which player is controlled by this client's input
+    HUMAN_PLAYER_NUMBER: 1,
+
+    // How close Fusemen must be on both axes, in pixels, to touch (and exchange mystery power-ups)
+    FUSEMAN_TOUCH_DISTANCE_PX: 12,
+
+    // How long to ignore input after a match ends, in milliseconds (so mashed keys don't skip the results)
+    MATCH_END_INPUT_DELAY_MS: 1000
 });

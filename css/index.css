@@ -7,6 +7,7 @@
 html, body {
     width: 100%;
     height: 100%;
+    height: 100dvh; /* Dynamic viewport height, excludes browser toolbars on mobile */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -16,6 +17,7 @@ html, body {
 canvas {
     /* Scale dynamically while keeping ratio */
     width: min(100vw, calc(100vh * (15 / 13)));
+    width: min(100vw, calc(100dvh * (15 / 13))); /* Excludes browser toolbars on mobile */
     height: auto;
     aspect-ratio: 15 / 13;
 
@@ -24,4 +26,150 @@ canvas {
     /* Prevent browser blurring on upscale */
     image-rendering: pixelated;   /* Chrome, Edge, Safari */
     image-rendering: crisp-edges; /* FF */
+}
+
+/* Prevent scrolling, zooming, and text selection from interfering with touch input */
+html, body {
+    overscroll-behavior: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch controls, hidden unless enabled by script on a touch device */
+#touch-controls {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    #touch-controls.enabled {
+        display: block;
+    }
+}
+
+#dpad, #plant-button {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 4vmin);
+    touch-action: none;
+}
+
+/* D-pad on the left, sized relative to the smaller screen dimension */
+#dpad {
+    --size: min(38vmin, 200px);
+    left: calc(env(safe-area-inset-left, 0px) + 4vmin);
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Each arm is a triangle pointing outward from the center */
+.dpad-arm {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: calc(var(--size) * 0.1) solid transparent;
+    pointer-events: none;
+}
+
+.dpad-arm[data-dir="up"] {
+    top: 8%;
+    left: calc(50% - var(--size) * 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+.dpad-arm[data-dir="down"] {
+    bottom: 8%;
+    left: calc(50% - var(--size) * 0.1);
+    border-top-color: rgba(255, 255, 255, 0.5);
+}
+
+.dpad-arm[data-dir="left"] {
+    left: 8%;
+    top: calc(50% - var(--size) * 0.1);
+    border-right-color: rgba(255, 255, 255, 0.5);
+}
+
+.dpad-arm[data-dir="right"] {
+    right: 8%;
+    top: calc(50% - var(--size) * 0.1);
+    border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Highlight the arm currently being pressed */
+.dpad-arm.active[data-dir="up"] {
+    border-bottom-color: #fff;
+}
+
+.dpad-arm.active[data-dir="down"] {
+    border-top-color: #fff;
+}
+
+.dpad-arm.active[data-dir="left"] {
+    border-right-color: #fff;
+}
+
+.dpad-arm.active[data-dir="right"] {
+    border-left-color: #fff;
+}
+
+/* Plant button on the right */
+#plant-button {
+    right: calc(env(safe-area-inset-right, 0px) + 4vmin);
+    width: min(24vmin, 128px);
+    height: min(24vmin, 128px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.7);
+    font: bold 14px monospace;
+}
+
+#plant-button.active {
+    background: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+/* Overlay for pause & match end text, only displayed when visible */
+#overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2vmin;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-family: monospace;
+    text-align: center;
+}
+
+#overlay.visible {
+    display: flex;
+}
+
+#overlay-title {
+    font-size: clamp(32px, 9vmin, 96px);
+}
+
+#overlay-subtitle {
+    font-size: clamp(14px, 3vmin, 28px);
+}
+
+/* Debug FPS counter (enabled with ?fps) */
+#fps {
+    position: fixed;
+    top: 4px;
+    left: 4px;
+    z-index: 20;
+    color: #0f0;
+    font: bold 14px monospace;
+    pointer-events: none;
 }

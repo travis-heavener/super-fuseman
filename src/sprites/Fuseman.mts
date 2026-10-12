@@ -87,6 +87,9 @@ export default class Fuseman extends Sprite {
     // Whether or not to ignore spammed fuse plant requests from keyboard
     private isIgnoringHeldFusePlants: boolean;
 
+    // The other Fusemen currently touching this one (so power-ups only exchange on first contact)
+    private touching: Set<Fuseman>;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -110,6 +113,7 @@ export default class Fuseman extends Sprite {
             "numAvailFuses": 1
         } as FusemanStats);
         this.currentMysteryPowerUp = null;
+        this.touching = new Set();
 
         // Disable opacity
         super.disableOpaqueness();
@@ -229,7 +233,7 @@ export default class Fuseman extends Sprite {
         };
 
         // Check for key press
-        if (this.playerNumber === 1) {
+        if (this.playerNumber === Consts.HUMAN_PLAYER_NUMBER) {
             // Lock currently held keys & look for most recently pressed movement key
             const keysHeld = [...globalThis.keysHeld];
             let hasAttemptedFusePlant = false;
@@ -325,13 +329,18 @@ export default class Fuseman extends Sprite {
                             case Variant.EXTRA_FUSE:
                                 ++this.stats.numTotalFuses;
                                 ++this.stats.numAvailFuses;
+                                globalThis.playSound("collectible", 0.5);
                                 break;
-                            case Variant.LARGER_BLASTS: ++this.stats.blastRadius; break;
+                            case Variant.LARGER_BLASTS:
+                                ++this.stats.blastRadius;
+                                globalThis.playSound("collectible", 0.5);
+                                break;
                             default:
                                 this.currentMysteryPowerUp = {
                                     "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
                                     "variant": collectible.variant
                                 };
+                                globalThis.playSound("powerup", 0.5);
                                 break;
                         }
 
@@ -347,6 +356,62 @@ export default class Fuseman extends Sprite {
                 renderer.attemptPlaceFuse(x, y, this, blastRadius);
             }
         }
+    }
+
+    /**
+     * Returns true if this Fuseman is still in the match (neither dying nor dead)
+     */
+    isAlive(): boolean {
+        return !this.isDying && !this.isDead;
+    }
+
+    /**
+     * Returns true if this Fuseman's death animation is currently playing
+     */
+    isDeathAnimating(): boolean {
+        return this.isDying;
+    }
+
+    /**
+     * Spreads mystery power-ups between Fusemen the moment they first touch
+     * 
+     * Like the skull in Bomberman '93, power-ups are contagious: the carrier keeps theirs
+     * while the Fuseman they touch catches it too (unless that Fuseman already has one).
+     */
+    resolveTouch(other: Fuseman): void {
+        // Determine if these Fusemen are close enough to touch
+        const isTouching = this.isAlive() && other.isAlive() &&
+            Math.abs(this.pos.x - other.pos.x) < Consts.FUSEMAN_TOUCH_DISTANCE_PX &&
+            Math.abs(this.pos.y - other.pos.y) < Consts.FUSEMAN_TOUCH_DISTANCE_PX;
+
+        // Only spread on first contact (at most one side can have a power-up to spread)
+        if (isTouching && !this.touching.has(other)) {
+            this.spreadPowerUpTo(other);
+            other.spreadPowerUpTo(this);
+        }
+
+        // Track contact (on both sides so the pair is only checked once per tick)
+        if (isTouching) {
+            this.touching.add(other);
+            other.touching.add(this);
+        } else {
+            this.touching.delete(other);
+            other.touching.delete(this);
+        }
+    }
+
+    /**
+     * Gives another Fuseman a copy of this one's mystery power-up, with a full-length timer
+     * 
+     * Does nothing if this Fuseman has none or the other is already affected by one.
+     */
+    private spreadPowerUpTo(other: Fuseman): void {
+        if (!this.currentMysteryPowerUp || other.currentMysteryPowerUp) return;
+
+        other.currentMysteryPowerUp = {
+            "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
+            "variant": this.currentMysteryPowerUp.variant
+        };
     }
 
     /**
@@ -428,6 +493,13 @@ export default class Fuseman extends Sprite {
     }
 
     /**
+     * Returns true if a grid space can be walked onto (empty or holding a Collectible), used for rounding corners
+     */
+    private isPassable(sprite: Sprite | true | null): boolean {
+        return sprite === null || sprite instanceof Collectible;
+    }
+
+    /**
      * Resolves movement between colliding objects with this Fuseman, O(n) time
      */
     resolveCollisions(renderer: Renderer) {
@@ -485,10 +557,10 @@ export default class Fuseman extends Sprite {
                     const gridSpaceAbove = (tileY - 1 >= 0) ? renderer.getSpriteFromGrid(tileX, tileY - 1) : true;
 
                     // Check for gap below collided tile
-                    if ( intent.endPos!.y - sprite.pos.y >= 14 && gridSpaceBelow === null ) {
+                    if ( intent.endPos!.y - sprite.pos.y >= 14 && this.isPassable(gridSpaceBelow) ) {
                         newEndPos.y = sprite.pos.y + 16; // Fix alignment
                         intent.isAdjusted = true;
-                    } else if ( sprite.pos.y - intent.endPos!.y >= 14 && gridSpaceAbove === null ) {
+                    } else if ( sprite.pos.y - intent.endPos!.y >= 14 && this.isPassable(gridSpaceAbove) ) {
                         newEndPos.y = sprite.pos.y - 16; // Fix alignment
                         intent.isAdjusted = true;
                     } else if ((sprite.pos.x < newEndPos.x && intent.direction === "left") ||
@@ -519,10 +591,10 @@ export default class Fuseman extends Sprite {
                     const gridSpaceLeft = (tileX - 1 >= 0) ? renderer.getSpriteFromGrid(tileX - 1, tileY) : true;
 
                     // Check for gap below collided tile
-                    if ( intent.endPos!.x - sprite.pos.x >= 14 && gridSpaceRight === null ) {
+                    if ( intent.endPos!.x - sprite.pos.x >= 14 && this.isPassable(gridSpaceRight) ) {
                         newEndPos.x = sprite.pos.x + 16; // Fix alignment
                         intent.isAdjusted = true;
-                    } else if ( sprite.pos.x - intent.endPos!.x >= 14 && gridSpaceLeft === null ) {
+                    } else if ( sprite.pos.x - intent.endPos!.x >= 14 && this.isPassable(gridSpaceLeft) ) {
                         newEndPos.x = sprite.pos.x - 16; // Fix alignment
                         intent.isAdjusted = true;
                     } else if ((sprite.pos.y < newEndPos.y && intent.direction === "up") ||

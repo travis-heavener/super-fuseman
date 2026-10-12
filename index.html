@@ -2,11 +2,30 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+        <meta name="theme-color" content="#111">
         <title>Super Fuseman</title>
         <link rel="stylesheet" href="/css/index.css">
         <script src="/js/index.mjs" type="module" defer></script>
     </head>
     <body>
         <canvas></canvas>
+
+        <!-- Pause & match end text (HTML so it stays crisp when the canvas is scaled up) -->
+        <div id="overlay">
+            <h1 id="overlay-title"></h1>
+            <p id="overlay-subtitle"></p>
+        </div>
+
+        <!-- Touch controls (revealed by script, only displayed on touch devices) -->
+        <div id="touch-controls">
+            <div id="dpad">
+                <span class="dpad-arm" data-dir="up"></span>
+                <span class="dpad-arm" data-dir="down"></span>
+                <span class="dpad-arm" data-dir="left"></span>
+                <span class="dpad-arm" data-dir="right"></span>
+            </div>
+            <div id="plant-button">PLANT</div>
+        </div>
     </body>
 </html>

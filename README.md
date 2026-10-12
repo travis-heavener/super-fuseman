@@ -16,3 +16,10 @@ As for why I'm doing this in web JavaScript, I really just wanted to do a throwb
 2. Run `npx tsc` to compile the TypeScript files.
 3. Using your HTTP server of choice, point your document root at this project directory.
 4. Open the game via localhost and enjoy!
+
+## Debugging
+
+### FPS Counter
+Append `?fps` to the URL (e.g. `http://localhost:8080/?fps`) to show a frames-per-second counter in the top-left corner of the page.
+
+The counter measures the rate of the browser's `requestAnimationFrame` loop, which is capped by the browser and display server, so it's useful for telling a slow game apart from a slow display.

@@ -41,12 +41,10 @@ const resPath = "../../res";
 export default class Textures {
     fusers: FusemanSpriteMap[];
     tiles: TileSpriteMap;
-    initPrompt: ImageBitmap;
 
-    private constructor(fusers: FusemanSpriteMap[], tiles: TileSpriteMap, initPrompt: ImageBitmap) {
+    private constructor(fusers: FusemanSpriteMap[], tiles: TileSpriteMap) {
         this.fusers = fusers;
         this.tiles = tiles;
-        this.initPrompt = initPrompt;
     }
 
     /**
@@ -179,11 +177,8 @@ export default class Textures {
             tilesSpritesheet.close();
         }
 
-        // Load initial prompt
-        const initPrompt = await createImageBitmap( await Textures.loadSpritemap(resPath + "/gfx/init.png") );
-
         // Create Textures
-        return new Textures(fusers, tiles, initPrompt);
+        return new Textures(fusers, tiles);
     }
 
     /**

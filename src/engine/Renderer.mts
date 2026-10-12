@@ -10,6 +10,15 @@ import MutableTile from "../sprites/MutableTile.mjs";
 import Point2 from "../tools/Point2.mjs";
 
 /**
+ * The result of a finished match
+ */
+export type MatchResult = {
+    // "win" if one Fuseman remains, "draw" if none do, "defeat" if the human player died with others still alive
+    outcome: "win" | "draw" | "defeat";
+    winner?: number;
+};
+
+/**
  * A renderer class that holds references to all sprites.
  * 
  * The draw() method is invoked by the requestAnimationFrame loop to render a frame.
@@ -34,6 +43,8 @@ export default class Renderer {
         this.fuses = [];
         this.blasts = [];
         this.collectibles = [];
+        this.grid = [];
+        this.themeIndex = 0;
 
         this.canvas = document.getElementsByTagName("canvas")[0];
         this.ctx = this.canvas.getContext("2d") as any;
@@ -51,6 +62,25 @@ export default class Renderer {
         // Load textures
         this.textures = textures;
 
+        // Set up the first match
+        this.reset();
+    }
+
+    static async create() {
+        return new Renderer( await Textures.create() );
+    }
+
+    /**
+     * Clears all sprites and sets up a fresh match
+     */
+    reset() {
+        // Clear all sprites
+        this.fusers.length = 0;
+        this.mutableTiles.length = 0;
+        this.fuses.length = 0;
+        this.blasts.length = 0;
+        this.collectibles.length = 0;
+
         // Choose a map theme
         this.themeIndex = Math.floor(Math.random() * Consts.NUM_THEMES);
 
@@ -67,12 +97,8 @@ export default class Renderer {
         this.createSprites();
     }
 
-    static async create() {
-        return new Renderer( await Textures.create() );
-    }
-
     /**
-     * Creates sprites at game load
+     * Creates sprites at the start of each match
      */
     private createSprites() {
         // Create Fuseman sprites
@@ -166,19 +192,32 @@ export default class Renderer {
         // 3B. Update mutable tiles & other tickables
         this.mutableTiles.forEach(mt => mt.tick(dt, this));
         this.collectibles.forEach(c => c.tick(dt, this));
+
+        // 4. Exchange mystery power-ups between Fusemen that touch
+        for (let i = 0; i < this.fusers.length; ++i)
+            for (let j = i + 1; j < this.fusers.length; ++j)
+                this.fusers[i].resolveTouch(this.fusers[j]);
     }
 
     /**
-     * Renders once the page loads, requesting the user to press any key to start
+     * Returns the result of the match if it has ended, otherwise null
+     * 
+     * The match ends when one or fewer Fusemen remain, or when the human player dies.
      */
-    initialRender() {
-        // Render frame
-        this.render();
+    getMatchResult(): MatchResult | null {
+        // Let any death animations finish first
+        if (this.fusers.some(f => f.isDeathAnimating())) return null;
 
-        // Render overlay prompt
-        this.ctx.drawImage(
-            this.textures.initPrompt, 0, 0, this.canvas.width, this.canvas.height
-        );
+        // Check for a last Fuseman standing (or nobody)
+        const alive = this.fusers.filter(f => f.isAlive());
+        if (alive.length === 1) return { "outcome": "win", "winner": alive[0].playerNumber };
+        if (alive.length === 0) return { "outcome": "draw" };
+
+        // Otherwise, the match is over once the human player is out
+        const human = this.fusers.find(f => f.playerNumber === Consts.HUMAN_PLAYER_NUMBER);
+        if (human && !human.isAlive()) return { "outcome": "defeat" };
+
+        return null;
     }
 
     /**
