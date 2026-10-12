@@ -7,12 +7,15 @@
         <title>Super Fuseman</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&amp;display=swap" rel="stylesheet">
         <link rel="stylesheet" href="/css/index.css">
         <script src="/js/index.mjs" type="module" defer></script>
     </head>
     <body>
         <canvas></canvas>
+
+        <!-- Brief warning before the arena closes in sudden death -->
+        <div id="warning" role="status" aria-live="polite"></div>
 
         <!-- Pause & match end text (HTML so it stays crisp when the canvas is scaled up) -->
         <div id="overlay">

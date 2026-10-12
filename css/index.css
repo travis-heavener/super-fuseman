@@ -151,6 +151,33 @@ html, body {
     color: #fff;
 }
 
+/* Short sudden-death warning above the arena without blocking input */
+#warning {
+    display: none;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 3vmin);
+    left: 50%;
+    z-index: 5;
+    max-width: 60vw;
+    padding: 0.3em 0.65em;
+    transform: translateX(-50%);
+    background: rgba(35, 0, 0, 0.85);
+    border: 2px solid #ffbe54;
+    color: #fff3c7;
+    font: bold clamp(16px, 4vmin, 28px) "Pixelify Sans", monospace;
+    text-align: center;
+    pointer-events: none;
+}
+
+#warning.visible {
+    display: block;
+    animation: warning-pulse 0.7s step-end infinite;
+}
+
+@keyframes warning-pulse {
+    50% { color: #ff7955; }
+}
+
 /* Overlay for pause & match end text, only displayed when visible */
 #overlay {
     display: none;

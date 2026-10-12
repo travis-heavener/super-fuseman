@@ -36,6 +36,12 @@ export default Object.freeze({
     // How long a mystery Collectible power-up lasts, in seconds
     MYSTERY_COLLECTIBLE_TIMER_SEC: 20,
 
+    // When sudden death starts, how early to warn, and how quickly tiles close inward
+    SUDDEN_DEATH_DELAY_SEC: 90,
+    SUDDEN_DEATH_WARNING_SEC: 5,
+    SUDDEN_DEATH_TILE_INTERVAL_SEC: 0.22,
+    SUDDEN_DEATH_TILE_DROP_SEC: 0.22,
+
     // Default key mappings for Fuseman
     KEYS: {
         LEFT: "KeyA",

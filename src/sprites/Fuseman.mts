@@ -446,6 +446,13 @@ export default class Fuseman extends Sprite {
     }
 
     /**
+     * Crushes a Fuseman when a sudden-death tile lands on their position
+     */
+    crush(renderer: Renderer): void {
+        if (this.isAlive()) this.startDeath(renderer);
+    }
+
+    /**
      * Spreads mystery power-ups between Fusemen the moment they first touch
      * 
      * Like the skull in Bomberman '93, power-ups are contagious: the carrier keeps theirs
@@ -474,7 +481,7 @@ export default class Fuseman extends Sprite {
     }
 
     /**
-     * Gives another Fuseman a copy of this one's mystery power-up, with a full-length timer
+     * Gives another Fuseman a copy of this one's mystery power-up, with its remaining time
      * 
      * Does nothing if this Fuseman has none or the other is already affected by one.
      */
@@ -482,7 +489,7 @@ export default class Fuseman extends Sprite {
         if (!this.currentMysteryPowerUp || other.currentMysteryPowerUp) return false;
 
         other.currentMysteryPowerUp = {
-            "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
+            "timer": this.currentMysteryPowerUp.timer,
             "variant": this.currentMysteryPowerUp.variant
         };
         return true;

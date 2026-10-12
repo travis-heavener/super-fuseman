@@ -23,6 +23,8 @@ Move with WASD and place a fuse with K. Press Escape to pause or resume. On touc
 
 Acquired upgrades and active temporary power-ups scatter on death. An animated shimmer marks affected players. If you die, the match continues until one player remains or everyone is out.
 
+Temporary effects last 20 seconds from pickup, including when passed between players. After 90 seconds, a warning appears and immutable tiles close the arena one ring at a time. Change `SUDDEN_DEATH_DELAY_SEC` in `src/tools/Consts.mts` to adjust the start time.
+
 ## Debugging
 
 ### FPS Counter

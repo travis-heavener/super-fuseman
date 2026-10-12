@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Create scene & overlay
     const renderer = await Renderer.create();
     const overlay = new Overlay();
+    const warning = document.getElementById("warning") as HTMLElement;
 
     // Render the first frame beneath the title screen
     renderer.render();
@@ -41,6 +42,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Update game state
         renderer.update(dt);
+
+        // Show the approaching arena closure without obscuring the match
+        const warningText = renderer.getSuddenDeathWarning() || "";
+        if (warning.textContent !== warningText) warning.textContent = warningText;
+        warning.classList.toggle("visible", warningText !== "");
 
         // Render next frame
         renderer.render();
@@ -83,13 +89,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         state = "gameOver";
         gameOverTimestamp = Date.now();
         releaseInputs();
+        warning.classList.remove("visible");
 
         // Determine results text
         let title: string;
         switch (result.outcome) {
             case "win": title = `PLAYER ${result.winner} WINS`; break;
             case "draw": title = "DRAW"; break;
-            default: title = "GAME OVER"; break;
         }
         overlay.show(title);
 
@@ -146,6 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 // Start a new match
                 renderer.reset();
+                warning.classList.remove("visible");
                 beginPlaying();
                 break;
         }

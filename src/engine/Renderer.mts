@@ -31,6 +31,12 @@ export default class Renderer {
     private collectibles: Collectible[];
     private grid: (Sprite | null)[][];
 
+    // The ordered interior tiles and landing animations for sudden death
+    private closingTiles: Point2[];
+    private fallingTiles: ImmutableTile[];
+    private closingTileIndex: number;
+    private matchTime: number;
+
     private textures: Textures;
     private themeIndex: number;
 
@@ -44,6 +50,10 @@ export default class Renderer {
         this.blasts = [];
         this.collectibles = [];
         this.grid = [];
+        this.closingTiles = [];
+        this.fallingTiles = [];
+        this.closingTileIndex = 0;
+        this.matchTime = 0;
         this.themeIndex = 0;
 
         this.canvas = document.getElementsByTagName("canvas")[0];
@@ -80,6 +90,9 @@ export default class Renderer {
         this.fuses.length = 0;
         this.blasts.length = 0;
         this.collectibles.length = 0;
+        this.fallingTiles.length = 0;
+        this.closingTileIndex = 0;
+        this.matchTime = 0;
 
         // Choose a map theme
         this.themeIndex = Math.floor(Math.random() * Consts.NUM_THEMES);
@@ -95,6 +108,29 @@ export default class Renderer {
 
         // Create sprites
         this.createSprites();
+        this.createClosingRoute();
+    }
+
+    /**
+     * Orders each interior ring clockwise, working from the outer edge inward
+     */
+    private createClosingRoute() {
+        this.closingTiles = [];
+        for (let inset = 1; inset <= Math.ceil(Math.min(Consts.TILES_ACROSS, Consts.TILES_DOWN) / 2); ++inset) {
+            const left = inset;
+            const right = Consts.TILES_ACROSS_EXTERIOR - 1 - inset;
+            const top = inset;
+            const bottom = Consts.TILES_DOWN_EXTERIOR - 1 - inset;
+            if (left > right || top > bottom) break;
+
+            // Walk all four sides without repeating their corner tiles
+            for (let x = left; x <= right; ++x) this.closingTiles.push(new Point2(x, top));
+            for (let y = top + 1; y <= bottom; ++y) this.closingTiles.push(new Point2(right, y));
+            if (bottom > top)
+                for (let x = right - 1; x >= left; --x) this.closingTiles.push(new Point2(x, bottom));
+            if (left < right)
+                for (let y = bottom - 1; y > top; --y) this.closingTiles.push(new Point2(left, y));
+        }
     }
 
     /**
@@ -197,6 +233,60 @@ export default class Renderer {
         for (let i = 0; i < this.fusers.length; ++i)
             for (let j = i + 1; j < this.fusers.length; ++j)
                 this.fusers[i].resolveTouch(this.fusers[j]);
+
+        // 5. Close the arena tile by tile after the sudden-death delay
+        this.matchTime += dt;
+        this.fallingTiles.forEach(tile => tile.tick(dt));
+        this.fallingTiles = this.fallingTiles.filter(tile => tile.isDropping());
+        while (this.closingTileIndex < this.closingTiles.length && this.matchTime >=
+            Consts.SUDDEN_DEATH_DELAY_SEC + this.closingTileIndex * Consts.SUDDEN_DEATH_TILE_INTERVAL_SEC) {
+            this.placeClosingTile(this.closingTiles[this.closingTileIndex++]);
+        }
+    }
+
+    /**
+     * Returns a short warning shortly before and after the arena begins closing
+     */
+    getSuddenDeathWarning(): string | null {
+        if (this.matchTime >= Consts.SUDDEN_DEATH_DELAY_SEC - Consts.SUDDEN_DEATH_WARNING_SEC &&
+            this.matchTime < Consts.SUDDEN_DEATH_DELAY_SEC) return "ARENA CLOSING SOON";
+        if (this.matchTime >= Consts.SUDDEN_DEATH_DELAY_SEC &&
+            this.matchTime < Consts.SUDDEN_DEATH_DELAY_SEC + 2) return "SUDDEN DEATH";
+        return null;
+    }
+
+    /**
+     * Replaces a grid occupant with an immutable tile and crushes anyone it touches
+     */
+    private placeClosingTile(tile: Point2) {
+        const x = tile.x;
+        const y = tile.y;
+        const occupant = this.grid[x][y];
+        if (occupant instanceof ImmutableTile) return;
+
+        // Remove the old sprite from its timer array before replacing its grid cell
+        if (occupant instanceof Fuse) {
+            this.fuses.splice(this.fuses.indexOf(occupant), 1);
+            occupant.owner.incAvailFuses();
+        } else if (occupant instanceof Blast) {
+            this.blasts.splice(this.blasts.indexOf(occupant), 1);
+        } else if (occupant instanceof MutableTile) {
+            this.mutableTiles.splice(this.mutableTiles.indexOf(occupant), 1);
+        } else if (occupant instanceof Collectible) {
+            this.collectibles.splice(this.collectibles.indexOf(occupant), 1);
+        }
+
+        // Block the cell immediately; the tile artwork drops into place over a few frames
+        const pos = new Point2(x * 16, y * 16);
+        const fallingTile = new ImmutableTile(pos, this.themeIndex, true);
+        this.grid[x][y] = fallingTile;
+        this.fallingTiles.push(fallingTile);
+
+        // A player straddling the closing cell is caught even if their origin is elsewhere
+        for (const fuseman of this.fusers) {
+            if (fuseman.pos.x < pos.x + 16 && fuseman.pos.x + 16 > pos.x &&
+                fuseman.pos.y < pos.y + 16 && fuseman.pos.y + 16 > pos.y) fuseman.crush(this);
+        }
     }
 
     /**
@@ -229,7 +319,7 @@ export default class Renderer {
                 const tile = this.grid[x][y];
 
                 // Draw background behind fuses
-                if (!tile || !tile.isOpaque()) {
+                if (!tile || !tile.isOpaque() || (tile instanceof ImmutableTile && tile.isDropping())) {
                     this.ctx.drawImage(
                         this.textures.tiles.frames[ this.textures.tiles.backgroundTile[this.themeIndex] ],
                         x * 16, y * 16,
@@ -237,8 +327,9 @@ export default class Renderer {
                     );
                 }
 
-                // Draw any filled tiles' Sprites
-                if (tile) tile!.draw(this.ctx, this.textures);
+                // Draw filled tiles, saving falling ones to land over the players
+                if (tile && !(tile instanceof ImmutableTile && tile.isDropping()))
+                    tile.draw(this.ctx, this.textures);
             }
         }
 
@@ -249,6 +340,9 @@ export default class Renderer {
 
         // Draw Fusers overtop (backwards so player 1 is atop player 2, etc.)
         this.fusers.toReversed().forEach(f => f.draw(this.ctx, this.textures));
+
+        // Draw incoming sudden-death tiles above any player caught beneath them
+        this.fallingTiles.forEach(tile => tile.draw(this.ctx, this.textures));
     }
 
     /**
