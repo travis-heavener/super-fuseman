@@ -37,6 +37,7 @@ jobs:
           disable_external: true
           check_css: false
           ignore_empty_alt: true
+          ignore_url: /_vercel/insights/script.js
 
       #################### UPLOAD ARTIFACT ####################
       - name: Upload Built Public Directory
