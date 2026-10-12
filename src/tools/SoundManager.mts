@@ -55,7 +55,7 @@ export default class SoundManager {
     /**
      * Plays a loaded sound effect
      */
-    play(key: string, volume: number = 1) {
+    play(key: string, volume: number = 1, rate: number = 1) {
         const buffer = this.buffers.get(key);
         if (!buffer) return;
 
@@ -65,6 +65,7 @@ export default class SoundManager {
         // Create a source node (one-time use per playback)
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.value = rate;
 
         // Add gain node for volume control
         const gainNode = this.ctx.createGain();

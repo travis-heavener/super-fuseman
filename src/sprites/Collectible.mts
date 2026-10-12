@@ -36,10 +36,10 @@ export default class Collectible extends Sprite {
     // Which type of Collectible this is
     variant: Variant;
 
-    constructor(pos: Point2) {
+    constructor(pos: Point2, variant: Variant = Math.floor(Math.random() * Variant.__LENGTH)) {
         super(pos);
         this.timer = -Infinity;
-        this.variant = Math.floor(Math.random() * Variant.__LENGTH);
+        this.variant = variant;
     }
 
     /**

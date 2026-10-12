@@ -7,6 +7,7 @@ import Tile from "./Tile.mjs";
 import Blast from "./Blast.mjs";
 import Fuse from "./Fuse.mjs";
 import Collectible, { Variant } from "./Collectible.mjs";
+import NPCBrain from "../tools/NPCBrain.mjs";
 
 /**
  * Type wrapper for movement intent, determined before collision checks and is reset each tick
@@ -90,6 +91,12 @@ export default class Fuseman extends Sprite {
     // The other Fusemen currently touching this one (so power-ups only exchange on first contact)
     private touching: Set<Fuseman>;
 
+    // Autonomous controller for non-human Fusemen
+    private npcBrain: NPCBrain | null;
+
+    // Reusable 16x32 canvas for animating temporary effects within the sprite silhouette
+    private effectCanvas: HTMLCanvasElement | null;
+
     constructor(pos: Point2, playerNumber: number) {
         super(pos);
 
@@ -114,6 +121,8 @@ export default class Fuseman extends Sprite {
         } as FusemanStats);
         this.currentMysteryPowerUp = null;
         this.touching = new Set();
+        this.npcBrain = playerNumber === Consts.HUMAN_PLAYER_NUMBER ? null : new NPCBrain();
+        this.effectCanvas = null;
 
         // Disable opacity
         super.disableOpaqueness();
@@ -122,10 +131,19 @@ export default class Fuseman extends Sprite {
     /**
      * Initiates the demise of Fuseman
      */
-    private startDeath() {
+    private startDeath(renderer: Renderer) {
         this.isDying = true;
         this.isMoving = false;
         this.animFrameIndex = 0;
+
+        // Scatter each acquired permanent upgrade and any temporary effect still active
+        const drops: Variant[] = [];
+        for (let i = 1; i < this.stats.numTotalFuses; ++i) drops.push(Variant.EXTRA_FUSE);
+        for (let i = 2; i < this.stats.blastRadius; ++i) drops.push(Variant.LARGER_BLASTS);
+        if (this.currentMysteryPowerUp && this.currentMysteryPowerUp.timer > 0)
+            drops.push(this.currentMysteryPowerUp.variant);
+        renderer.scatterCollectibles(this.pos, drops);
+
         globalThis.playSound("death", 0.65);
     }
 
@@ -135,6 +153,45 @@ export default class Fuseman extends Sprite {
     private finishDeath() {
         this.isDead = true;
         this.isDying = false;
+    }
+
+    /**
+     * Draws a frame with a cycling texture masked to the player's visible pixels
+     */
+    private drawFrame(ctx: CanvasRenderingContext2D, frame: ImageBitmap) {
+        if (!this.currentMysteryPowerUp || this.isDying) {
+            ctx.drawImage(frame, this.pos.x, this.pos.y - 16);
+            return;
+        }
+
+        // Allocate one tiny canvas per affected Fuseman and reuse it on each frame
+        if (!this.effectCanvas) {
+            this.effectCanvas = document.createElement("canvas");
+            this.effectCanvas.width = 16;
+            this.effectCanvas.height = 32;
+        }
+        const effectCtx = this.effectCanvas.getContext("2d")!;
+        effectCtx.clearRect(0, 0, 16, 32);
+        effectCtx.drawImage(frame, 0, 0);
+
+        // Source-atop applies the moving flecks only where the sprite has opaque pixels
+        const phase = Math.floor(Date.now() / 120) % 6;
+        const colors = ["#fff08a", "#8df1ff", "#ffa4e2"];
+        effectCtx.globalCompositeOperation = "source-atop";
+        effectCtx.globalAlpha = 0.2;
+        effectCtx.fillStyle = colors[phase % colors.length];
+        effectCtx.fillRect(0, 0, 16, 32);
+
+        // Shift small highlights across the silhouette without covering the sprite art
+        effectCtx.globalAlpha = 0.65;
+        effectCtx.fillStyle = colors[(phase + 1) % colors.length];
+        for (let y = 1; y < 32; y += 4)
+            effectCtx.fillRect((phase * 3 + Math.floor(y / 4) * 3) % 16, y, 2, 2);
+        effectCtx.globalCompositeOperation = "source-over";
+        effectCtx.globalAlpha = 1;
+
+        // Draw the masked frame at the same position as the unmodified sprite
+        ctx.drawImage(this.effectCanvas, this.pos.x, this.pos.y - 16);
     }
 
     /**
@@ -155,7 +212,7 @@ export default class Fuseman extends Sprite {
             const numFrames = textures.fusers[this.playerNumber - 1].die.length;
 
             // Draw frame
-            ctx.drawImage(textures.fusers[this.playerNumber - 1].frames[sheetFrameIndex], this.pos.x, this.pos.y - 16);
+            this.drawFrame(ctx, textures.fusers[this.playerNumber - 1].frames[sheetFrameIndex]);
 
             // Cycle to next animation frame, if needed
             if (this.animFrameIndex + 1 === numFrames) {
@@ -189,7 +246,7 @@ export default class Fuseman extends Sprite {
             }
 
             // Draw frame
-            ctx.drawImage(textures.fusers[this.playerNumber - 1].frames[sheetFrameIndex], this.pos.x, this.pos.y - 16);
+            this.drawFrame(ctx, textures.fusers[this.playerNumber - 1].frames[sheetFrameIndex]);
 
             // Cycle to next animation frame, if needed
             if (Date.now() - this.lastAnimationFrameTimestamp > Consts.ANIMATION_FRAME_INTERVAL_MS) {
@@ -207,16 +264,14 @@ export default class Fuseman extends Sprite {
             const sheetFrameIndex = textures.fusers[this.playerNumber - 1].idle;
 
             // Draw idle pose (shift up 16px for overdraw)
-            ctx.drawImage(
-                textures.fusers[this.playerNumber - 1].frames[ sheetFrameIndex ], this.pos.x, this.pos.y - 16
-            );
+            this.drawFrame(ctx, textures.fusers[this.playerNumber - 1].frames[ sheetFrameIndex ]);
         }
     }
 
     /**
      * Checks for movement intent before checking collisions or moving
      */
-    updateMovementIntent(dt: number): void {
+    updateMovementIntent(dt: number, renderer: Renderer): void {
         if (this.isDead || this.isDying) return;
 
         // Clear previous intents
@@ -287,7 +342,25 @@ export default class Fuseman extends Sprite {
 
             // Stop ignoring fuse plants if key is no longer held
             if (this.isIgnoringHeldFusePlants && !hasAttemptedFusePlant) this.isIgnoringHeldFusePlants = false;
+        } else if (this.npcBrain) {
+            // NPC decisions use the same collision and action pipeline as player input
+            const decision = this.npcBrain.decide(this, renderer, dt);
+            if (decision.plant) this.currentIntents.push({ "type": "placingFuse", "isAdjusted": false });
+            if (decision.direction && decision.endPos) this.currentIntents.push({
+                "type": "movement", "direction": decision.direction,
+                "endPos": decision.endPos, "isAdjusted": false
+            });
         }
+    }
+
+    /**
+     * Returns the current fuse capacity and blast reach for NPC planning
+     */
+    getNPCFuseStats(): { available: number, blastRadius: number } {
+        return {
+            "available": this.currentMysteryPowerUp?.variant === Variant.NO_FUSES ? 0 : this.stats.numAvailFuses,
+            "blastRadius": this.currentMysteryPowerUp?.variant === Variant.SMALL_BLASTS ? 1 : this.stats.blastRadius
+        };
     }
 
     /**
@@ -386,8 +459,8 @@ export default class Fuseman extends Sprite {
 
         // Only spread on first contact (at most one side can have a power-up to spread)
         if (isTouching && !this.touching.has(other)) {
-            this.spreadPowerUpTo(other);
-            other.spreadPowerUpTo(this);
+            const exchanged = this.spreadPowerUpTo(other) || other.spreadPowerUpTo(this);
+            if (exchanged) globalThis.playSound("powerup", 0.35, 1.35);
         }
 
         // Track contact (on both sides so the pair is only checked once per tick)
@@ -405,13 +478,14 @@ export default class Fuseman extends Sprite {
      * 
      * Does nothing if this Fuseman has none or the other is already affected by one.
      */
-    private spreadPowerUpTo(other: Fuseman): void {
-        if (!this.currentMysteryPowerUp || other.currentMysteryPowerUp) return;
+    private spreadPowerUpTo(other: Fuseman): boolean {
+        if (!this.currentMysteryPowerUp || other.currentMysteryPowerUp) return false;
 
         other.currentMysteryPowerUp = {
             "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
             "variant": this.currentMysteryPowerUp.variant
         };
+        return true;
     }
 
     /**
@@ -517,7 +591,7 @@ export default class Fuseman extends Sprite {
         if ( !this.currentIntents.some(i => i.type === "movement") ) {
             const collisions = this.getCollisions(this.pos.copy(), renderer);
             if ( collisions.some(sprite => sprite instanceof Blast) ) {
-                this.startDeath();
+                this.startDeath(renderer);
                 return;
             }
 
@@ -570,7 +644,7 @@ export default class Fuseman extends Sprite {
                         hasResolvedMovementIntent = false;
                     }
                 } else if (sprite instanceof Blast) {
-                    this.startDeath();
+                    this.startDeath(renderer);
                     return;
                 } else if (sprite instanceof Collectible) {
                     intent.collidedCollectible = sprite;
@@ -604,7 +678,7 @@ export default class Fuseman extends Sprite {
                         hasResolvedMovementIntent = false;
                     }
                 } else if (sprite instanceof Blast) {
-                    this.startDeath();
+                    this.startDeath(renderer);
                     return;
                 } else if (sprite instanceof Collectible) {
                     intent.collidedCollectible = sprite;

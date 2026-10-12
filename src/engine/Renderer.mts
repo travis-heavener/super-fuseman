@@ -1,6 +1,6 @@
 import Consts from "../tools/Consts.mjs";
 import Blast from "../sprites/Blast.mjs";
-import Collectible from "../sprites/Collectible.mjs";
+import Collectible, { Variant } from "../sprites/Collectible.mjs";
 import Fuse from "../sprites/Fuse.mjs";
 import Fuseman from "../sprites/Fuseman.mjs";
 import Textures from "./Textures.mjs";
@@ -13,8 +13,8 @@ import Point2 from "../tools/Point2.mjs";
  * The result of a finished match
  */
 export type MatchResult = {
-    // "win" if one Fuseman remains, "draw" if none do, "defeat" if the human player died with others still alive
-    outcome: "win" | "draw" | "defeat";
+    // "win" if one Fuseman remains, "draw" if none do
+    outcome: "win" | "draw";
     winner?: number;
 };
 
@@ -177,7 +177,7 @@ export default class Renderer {
      */
     update(dt: number) {
         // 1A. Update Fuseman sprite intents
-        this.fusers.forEach(fuseman => fuseman.updateMovementIntent(dt));
+        this.fusers.forEach(fuseman => fuseman.updateMovementIntent(dt, this));
 
         // 1B. Update fuse & blast timers
         this.fuses.forEach(fuse => fuse.tick(dt, this));
@@ -202,7 +202,7 @@ export default class Renderer {
     /**
      * Returns the result of the match if it has ended, otherwise null
      * 
-     * The match ends when one or fewer Fusemen remain, or when the human player dies.
+     * The match ends when one or fewer Fusemen remain, even if the human player died earlier.
      */
     getMatchResult(): MatchResult | null {
         // Let any death animations finish first
@@ -212,10 +212,6 @@ export default class Renderer {
         const alive = this.fusers.filter(f => f.isAlive());
         if (alive.length === 1) return { "outcome": "win", "winner": alive[0].playerNumber };
         if (alive.length === 0) return { "outcome": "draw" };
-
-        // Otherwise, the match is over once the human player is out
-        const human = this.fusers.find(f => f.playerNumber === Consts.HUMAN_PLAYER_NUMBER);
-        if (human && !human.isAlive()) return { "outcome": "defeat" };
 
         return null;
     }
@@ -385,6 +381,36 @@ export default class Renderer {
     }
 
     /**
+     * Scatters a fallen Fuseman's acquired power-ups onto nearby empty tiles
+     */
+    scatterCollectibles(pos: Point2, variants: Variant[]) {
+        if (variants.length === 0) return;
+
+        // Sort open spaces by distance from the fallen player, randomizing ties
+        const x = Math.round(pos.x / 16);
+        const y = Math.round(pos.y / 16);
+        const spaces: { x: number, y: number, distance: number }[] = [];
+        for (let tileX = 1; tileX < Consts.TILES_ACROSS_EXTERIOR - 1; ++tileX) {
+            for (let tileY = 1; tileY < Consts.TILES_DOWN_EXTERIOR - 1; ++tileY) {
+                if (this.grid[tileX][tileY] !== null || this.fusers.some(f => f.isAlive() &&
+                    Math.round(f.pos.x / 16) === tileX && Math.round(f.pos.y / 16) === tileY)) continue;
+                spaces.push({ "x": tileX, "y": tileY,
+                    "distance": Math.abs(tileX - x) + Math.abs(tileY - y) + Math.random() * 0.5 });
+            }
+        }
+        spaces.sort((a, b) => a.distance - b.distance);
+
+        // Keep the exact variants collected, with one item per available tile
+        for (const variant of variants) {
+            const space = spaces.shift();
+            if (!space) break;
+            const collectible = new Collectible(new Point2(space.x * 16, space.y * 16), variant);
+            this.collectibles.push(collectible);
+            this.grid[space.x][space.y] = collectible;
+        }
+    }
+
+    /**
      * Replaces a mutable tile with a collectible
      */
     generateCollectibleAtTile(mutableTile: MutableTile) {
@@ -403,6 +429,20 @@ export default class Renderer {
      */
     getSpriteFromGrid(x: number, y: number): Sprite | null {
         return this.grid[x][y];
+    }
+
+    /**
+     * Returns placed fuses for NPC danger prediction
+     */
+    getFuses(): readonly Fuse[] {
+        return this.fuses;
+    }
+
+    /**
+     * Returns the Fusemen in this match for NPC opponent tracking
+     */
+    getFusers(): readonly Fuseman[] {
+        return this.fusers;
     }
 
 };

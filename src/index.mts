@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Freeze audio & prompt to resume (the canvas keeps displaying the last frame)
         soundManager.suspend();
-        overlay.show("PAUSED", "Click, tap, or press any key to resume");
+        overlay.show("PAUSED", "Press Escape, click, or tap to resume");
     };
 
     // Resumes the game after being paused
@@ -129,10 +129,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 // Load SoundManager (depends on user-input event)
                 soundManager = await SoundManager.create();
-                globalThis.playSound = (key: string, volume: number = 1) => soundManager.play(key, volume);
+                globalThis.playSound = (key: string, volume: number = 1, rate: number = 1) =>
+                    soundManager.play(key, volume, rate);
 
                 // Bind touch controls (only visible on touch devices)
-                touchControls = new TouchControls();
+                touchControls = new TouchControls(pause);
 
                 beginPlaying();
                 break;
@@ -152,6 +153,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Bind key event listeners
     window.addEventListener("keydown", (e: KeyboardEvent) => {
+        // Escape toggles pause without becoming gameplay input
+        if (e.code === "Escape" && (state === "playing" || state === "paused")) {
+            e.preventDefault();
+            if (!e.repeat) {
+                if (state === "playing") pause();
+                else resume();
+            }
+            return;
+        }
+
         // Outside of gameplay, keys only advance the game state (so the key that resumes doesn't also plant a fuse)
         if (state !== "playing") {
             if (!e.repeat) handleInput();

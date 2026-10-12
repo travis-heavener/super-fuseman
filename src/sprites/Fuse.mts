@@ -85,6 +85,13 @@ export default class Fuse extends Sprite {
     }
 
     /**
+     * Returns the time and reach of this fuse for NPC escape planning
+     */
+    getThreat(): { timer: number, blastRadius: number } {
+        return { "timer": this.timer, "blastRadius": this.blastRadius };
+    }
+
+    /**
      * Returns the bounding box of the Fuse
      */
     getBounds(): Point2[] {

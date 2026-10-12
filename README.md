@@ -17,6 +17,12 @@ As for why I'm doing this in web JavaScript, I really just wanted to do a throwb
 3. Using your HTTP server of choice, point your document root at this project directory.
 4. Open the game via localhost and enjoy!
 
+## Controls
+
+Move with WASD and place a fuse with K. Press Escape to pause or resume. On touch devices, use the D-pad, PLANT button, and pause button.
+
+Acquired upgrades and active temporary power-ups scatter on death. An animated shimmer marks affected players. If you die, the match continues until one player remains or everyone is out.
+
 ## Debugging
 
 ### FPS Counter

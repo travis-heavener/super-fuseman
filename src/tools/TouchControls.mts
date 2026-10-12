@@ -9,6 +9,7 @@ export default class TouchControls {
     private container: HTMLElement;
     private dpad: HTMLElement;
     private plantButton: HTMLElement;
+    private pauseButton: HTMLButtonElement;
 
     // The D-pad's arm elements, by direction
     private arms: Map<string, HTMLElement>;
@@ -19,10 +20,11 @@ export default class TouchControls {
     // The key currently held by the D-pad, or null if centered
     private dpadKey: string | null;
 
-    constructor() {
+    constructor(onPause: () => void) {
         this.container = document.getElementById("touch-controls") as HTMLElement;
         this.dpad = document.getElementById("dpad") as HTMLElement;
         this.plantButton = document.getElementById("plant-button") as HTMLElement;
+        this.pauseButton = document.getElementById("pause-button") as HTMLButtonElement;
 
         // Locate each D-pad arm
         this.arms = new Map();
@@ -48,6 +50,12 @@ export default class TouchControls {
                 if ((e as PointerEvent).pointerId === this.dpadPointerId) this.releaseDpad();
             });
         }
+
+        // Pause on a click, stopping that same click from immediately resuming the overlay
+        this.pauseButton.addEventListener("click", (e: MouseEvent) => {
+            e.stopPropagation();
+            onPause();
+        });
 
         // Bind plant button listeners
         this.plantButton.addEventListener("pointerdown", (e: PointerEvent) => {

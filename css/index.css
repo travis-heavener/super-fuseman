@@ -12,6 +12,7 @@ html, body {
     justify-content: center;
     align-items: center;
     background: #111;
+    font-family: "Pixelify Sans", monospace;
 }
 
 canvas {
@@ -53,6 +54,21 @@ html, body {
     position: fixed;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 4vmin);
     touch-action: none;
+}
+
+/* Pause button above the playfield for touch players */
+#pause-button {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 3vmin);
+    right: calc(env(safe-area-inset-right, 0px) + 3vmin);
+    width: min(12vmin, 56px);
+    height: min(12vmin, 56px);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font: bold 20px "Pixelify Sans", monospace;
+    touch-action: manipulation;
 }
 
 /* D-pad on the left, sized relative to the smaller screen dimension */
@@ -127,7 +143,7 @@ html, body {
     background: rgba(255, 255, 255, 0.12);
     border: 2px solid rgba(255, 255, 255, 0.5);
     color: rgba(255, 255, 255, 0.7);
-    font: bold 14px monospace;
+    font: bold 14px "Pixelify Sans", monospace;
 }
 
 #plant-button.active {
@@ -147,7 +163,7 @@ html, body {
     gap: 2vmin;
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    font-family: monospace;
+    font-family: "Pixelify Sans", monospace;
     text-align: center;
 }
 
@@ -170,6 +186,6 @@ html, body {
     left: 4px;
     z-index: 20;
     color: #0f0;
-    font: bold 14px monospace;
+    font: bold 14px "Pixelify Sans", monospace;
     pointer-events: none;
 }
