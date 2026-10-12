@@ -10,13 +10,26 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&amp;display=swap" rel="stylesheet">
         <link rel="stylesheet" href="/css/index.css">
-        <script src="/js/index.mjs" type="module" defer></script>
+        <script src="/js/index.mjs" type="module"></script>
     </head>
     <body>
-        <canvas></canvas>
+        <!-- Match clock and page-session wins beside or above the playfield -->
+        <div id="game-layout">
+            <div id="hud" aria-label="Match status">
+                <div id="match-clock" aria-label="Match time 00:00">
+                    <span id="clock-label">TIME</span>
+                    <span id="clock-value">00:00</span>
+                </div>
+                <div id="scores" aria-label="Player wins"></div>
+            </div>
 
-        <!-- Brief warning before the arena closes in sudden death -->
-        <div id="warning" role="status" aria-live="polite"></div>
+            <div id="arena">
+                <canvas id="game-canvas"></canvas>
+
+                <!-- Brief warning before the arena closes in sudden death -->
+                <div id="warning" role="status" aria-live="polite"></div>
+            </div>
+        </div>
 
         <!-- Pause & match end text (HTML so it stays crisp when the canvas is scaled up) -->
         <div id="overlay">

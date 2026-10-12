@@ -15,10 +15,26 @@ html, body {
     font-family: "Pixelify Sans", monospace;
 }
 
-canvas {
-    /* Scale dynamically while keeping ratio */
-    width: min(100vw, calc(100vh * (15 / 13)));
-    width: min(100vw, calc(100dvh * (15 / 13))); /* Excludes browser toolbars on mobile */
+/* Keep the HUD beside the arena while scaling the game to the viewport */
+#game-layout {
+    --hud-width: clamp(64px, 15vmin, 132px);
+    position: relative;
+    width: min(100vw, calc(100vh * (15 / 13) + var(--hud-width) + 2vmin));
+    width: min(100vw, calc(100dvh * (15 / 13) + var(--hud-width) + 2vmin));
+    display: flex;
+    align-items: stretch;
+    gap: 2vmin;
+}
+
+#arena {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
     height: auto;
     aspect-ratio: 15 / 13;
 
@@ -27,6 +43,122 @@ canvas {
     /* Prevent browser blurring on upscale */
     image-rendering: pixelated;   /* Chrome, Edge, Safari */
     image-rendering: crisp-edges; /* FF */
+}
+
+/* Portraits and match time stay visible without covering the playfield */
+#hud {
+    position: relative;
+    z-index: 11;
+    width: var(--hud-width);
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+}
+
+#scores {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+}
+
+.player-score {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.player-score canvas {
+    width: auto;
+    height: clamp(60px, 12vmin, 120px);
+    max-height: 90%;
+    aspect-ratio: 1 / 2;
+    flex: none;
+    image-rendering: pixelated;
+}
+
+.score-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.score-player {
+    font-size: clamp(16px, 3vmin, 20px);
+    opacity: 0.7;
+}
+
+.score-wins {
+    font-size: clamp(30px, 6vmin, 40px);
+    line-height: 1;
+}
+
+#match-clock {
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+#clock-label {
+    font-size: clamp(10px, 1.5vmin, 14px);
+    opacity: 0.7;
+}
+
+#clock-value {
+    font-size: clamp(18px, 3vmin, 26px);
+    line-height: 1;
+}
+
+/* On portrait screens, place the clock first in a compact row above the arena */
+@media (orientation: portrait) {
+    #game-layout {
+        --hud-height: clamp(56px, 9vmin, 72px);
+        width: min(100vw, calc((100vh - var(--hud-height) - 2vmin) * (15 / 13)));
+        width: min(100vw, calc((100dvh - var(--hud-height) - 2vmin) * (15 / 13)));
+        flex-direction: column;
+    }
+
+    #hud {
+        width: 100%;
+        min-height: var(--hud-height);
+        flex-direction: row;
+        align-items: center;
+    }
+
+    #match-clock {
+        min-width: 68px;
+        padding: 0 6px 0 0;
+        border-bottom: 0;
+        border-right: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    #scores {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-rows: none;
+    }
+
+    .player-score {
+        gap: 2px;
+    }
+
+    .player-score canvas {
+        width: clamp(18px, 5.7vw, 26px);
+        height: auto;
+        max-height: none;
+    }
+
+    .score-player {
+        font-size: clamp(9px, 2.5vw, 12px);
+    }
+
+    .score-wins {
+        font-size: clamp(20px, 5.5vw, 26px);
+    }
 }
 
 /* Prevent scrolling, zooming, and text selection from interfering with touch input */
@@ -154,8 +286,8 @@ html, body {
 /* Short sudden-death warning above the arena without blocking input */
 #warning {
     display: none;
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 3vmin);
+    position: absolute;
+    top: 2vmin;
     left: 50%;
     z-index: 5;
     max-width: 60vw;
@@ -215,4 +347,9 @@ html, body {
     color: #0f0;
     font: bold 14px "Pixelify Sans", monospace;
     pointer-events: none;
+}
+@media screen and (orientation: landscape) and (pointer: coarse) {
+    .player-score canvas { height: clamp(40px, 8vmin, 64px) !important }
+    .score-player { font-size: clamp(10px, 1.5vmin, 14px) !important }
+    .score-wins { font-size: clamp(20px, 3vmin, 30px) !important }
 }

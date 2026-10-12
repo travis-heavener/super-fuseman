@@ -56,7 +56,7 @@ export default class Renderer {
         this.matchTime = 0;
         this.themeIndex = 0;
 
-        this.canvas = document.getElementsByTagName("canvas")[0];
+        this.canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d") as any;
 
         // Update canvas sizing
@@ -253,6 +253,21 @@ export default class Renderer {
         if (this.matchTime >= Consts.SUDDEN_DEATH_DELAY_SEC &&
             this.matchTime < Consts.SUDDEN_DEATH_DELAY_SEC + 2) return "SUDDEN DEATH";
         return null;
+    }
+
+    /**
+     * Returns elapsed match time for the clock above the arena
+     */
+    getMatchTime(): number {
+        return this.matchTime;
+    }
+
+    /**
+     * Returns a player's idle sprite frame for the wins display
+     */
+    getPlayerPortrait(playerNumber: number): ImageBitmap {
+        const sprites = this.textures.fusers[playerNumber - 1];
+        return sprites.frames[sprites.idle];
     }
 
     /**

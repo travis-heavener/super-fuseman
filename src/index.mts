@@ -1,4 +1,4 @@
-import Renderer, { MatchResult } from "./engine/Renderer.mjs";
+import Renderer, { type MatchResult } from "./engine/Renderer.mjs";
 import Consts from "./tools/Consts.mjs";
 import FpsCounter from "./tools/FpsCounter.mjs";
 import Overlay from "./tools/Overlay.mjs";
@@ -13,6 +13,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderer = await Renderer.create();
     const overlay = new Overlay();
     const warning = document.getElementById("warning") as HTMLElement;
+    const scores = document.getElementById("scores") as HTMLElement;
+    const matchClock = document.getElementById("match-clock") as HTMLElement;
+    const clockValue = document.getElementById("clock-value") as HTMLElement;
+
+    // Build one score card per player using the same idle art as the game
+    const wins = [0, 0, 0, 0, 0];
+    const scoreCards: HTMLElement[] = [];
+    const scoreLabels: HTMLElement[] = [];
+    for (let playerNumber = 1; playerNumber <= 5; ++playerNumber) {
+        const card = document.createElement("div");
+        card.className = "player-score";
+
+        // The 16x32 sprite is drawn once; CSS scales it without blurring
+        const portrait = document.createElement("canvas");
+        portrait.width = 16;
+        portrait.height = 32;
+        portrait.setAttribute("aria-hidden", "true");
+        portrait.getContext("2d")!.drawImage(renderer.getPlayerPortrait(playerNumber), 0, 0);
+
+        const details = document.createElement("div");
+        details.className = "score-details";
+        const playerLabel = document.createElement("span");
+        playerLabel.className = "score-player";
+        playerLabel.textContent = `P${playerNumber}`;
+        const scoreLabel = document.createElement("span");
+        scoreLabel.className = "score-wins";
+        details.append(playerLabel, scoreLabel);
+        card.append(portrait, details);
+        scores.append(card);
+        scoreCards.push(card);
+        scoreLabels.push(scoreLabel);
+    }
+
+    // The win totals last for this page session and reset on refresh
+    const updateScores = () => {
+        for (let i = 0; i < wins.length; ++i) {
+            scoreLabels[i].textContent = `${wins[i]}`;
+            scoreCards[i].setAttribute("aria-label", `Player ${i + 1}: ${wins[i]} wins`);
+        }
+    };
+    updateScores();
+
+    // Format elapsed match time as minutes and seconds, including sudden death
+    const updateClock = () => {
+        const seconds = Math.floor(renderer.getMatchTime());
+        const clockText = `${Math.floor(seconds / 60).toString().padStart(2, "0")}:` +
+            `${(seconds % 60).toString().padStart(2, "0")}`;
+        if (clockValue.textContent !== clockText) {
+            clockValue.textContent = clockText;
+            matchClock.setAttribute("aria-label", `Match time ${clockText}`);
+        }
+    };
 
     // Render the first frame beneath the title screen
     renderer.render();
@@ -30,6 +82,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     let lastTime = 0;
     let gameOverTimestamp = 0;
 
+    // Ask before discarding a match; paused games are still in progress
+    const preventMatchExit = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = true;
+    };
+
     // Store held keys in order of recently pressed
     globalThis.keysHeld = [] as string[];
 
@@ -42,6 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Update game state
         renderer.update(dt);
+        updateClock();
 
         // Show the approaching arena closure without obscuring the match
         const warningText = renderer.getSuddenDeathWarning() || "";
@@ -81,6 +140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         releaseInputs();
         overlay.hide();
         state = "playing";
+        window.addEventListener("beforeunload", preventMatchExit);
         startLoop();
     };
 
@@ -88,8 +148,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const endMatch = (result: MatchResult) => {
         state = "gameOver";
         gameOverTimestamp = Date.now();
+        window.removeEventListener("beforeunload", preventMatchExit);
         releaseInputs();
         warning.classList.remove("visible");
+
+        // Credit the survivor once before showing the result
+        if (result.outcome === "win" && result.winner) {
+            ++wins[result.winner - 1];
+            updateScores();
+        }
 
         // Determine results text
         let title: string;
@@ -152,6 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 // Start a new match
                 renderer.reset();
+                updateClock();
                 warning.classList.remove("visible");
                 beginPlaying();
                 break;
