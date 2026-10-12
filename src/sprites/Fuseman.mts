@@ -540,8 +540,9 @@ export default class Fuseman extends Sprite {
             }
 
             // Otherwise, didn't die so correct position
-            intent.endPos!.x = Math.round(newEndPos.x);
-            intent.endPos!.y = Math.round(newEndPos.y);
+            // Preserve fractional positions for frame-rate-independent movement
+            intent.endPos!.x = newEndPos.x;
+            intent.endPos!.y = newEndPos.y;
 
             // If this intent has failed due to collision, remove from intents
             if (!hasResolvedMovementIntent) this.currentIntents.splice(i--, 1);
