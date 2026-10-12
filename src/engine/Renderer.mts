@@ -373,7 +373,7 @@ export default class Renderer {
         this.fuses.push(fuse);
         this.grid[x][y] = fuse;
         owner.decAvailFuses();
-        globalThis.playSound("place_fuse", 0.9);
+        globalThis.playSound("place_fuse", 0.75);
     }
 
     /**
@@ -382,7 +382,7 @@ export default class Renderer {
     spawnBlast(fuse: Fuse, blastRadius: number): void {
         // Allow owner to place more fuses
         fuse.owner.incAvailFuses();
-        globalThis.playSound("explosion", 0.6);
+        globalThis.playSound("explosion", 0.5);
 
         // Determine grid position
         const x = Math.floor(fuse.pos.x / 16);

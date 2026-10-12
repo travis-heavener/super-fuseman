@@ -257,7 +257,7 @@ export default class Fuseman extends Sprite {
             // Play footstep sound, if needed
             if (Date.now() - this.lastFootstepSFXTimestamp > Consts.FOOTSTEP_SFX_INTERVAL_MS) {
                 this.lastFootstepSFXTimestamp = Date.now();
-                globalThis.playSound("footstep", 0.4);
+                globalThis.playSound("footstep", 0.25);
             }
         } else {
             // Current frame index from the array of frames on spritesheet
@@ -413,7 +413,7 @@ export default class Fuseman extends Sprite {
                                     "timer": Consts.MYSTERY_COLLECTIBLE_TIMER_SEC,
                                     "variant": collectible.variant
                                 };
-                                globalThis.playSound("powerup", 0.5);
+                                globalThis.playSound("powerup", 0.33);
                                 break;
                         }
 
@@ -467,7 +467,7 @@ export default class Fuseman extends Sprite {
         // Only spread on first contact (at most one side can have a power-up to spread)
         if (isTouching && !this.touching.has(other)) {
             const exchanged = this.spreadPowerUpTo(other) || other.spreadPowerUpTo(this);
-            if (exchanged) globalThis.playSound("powerup", 0.35, 1.35);
+            if (exchanged) globalThis.playSound("powerup", 0.25, 1.35);
         }
 
         // Track contact (on both sides so the pair is only checked once per tick)
