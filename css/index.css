@@ -15,12 +15,12 @@ html, body {
     font-family: "Pixelify Sans", monospace;
 }
 
-/* Keep the HUD beside the arena while scaling the game to the viewport */
+/* Center the arena itself, reserving equal side space for the HUD */
 #game-layout {
     --hud-width: clamp(64px, 15vmin, 132px);
     position: relative;
-    width: min(100vw, calc(100vh * (15 / 13) + var(--hud-width) + 2vmin));
-    width: min(100vw, calc(100dvh * (15 / 13) + var(--hud-width) + 2vmin));
+    width: min(calc(100vw - var(--hud-width) - var(--hud-width) - 4vmin), calc(100vh * (15 / 13)));
+    width: min(calc(100vw - var(--hud-width) - var(--hud-width) - 4vmin), calc(100dvh * (15 / 13)));
     display: flex;
     align-items: stretch;
     gap: 2vmin;
@@ -47,9 +47,12 @@ html, body {
 
 /* Portraits and match time stay visible without covering the playfield */
 #hud {
-    position: relative;
+    position: absolute;
+    top: 0;
+    right: calc(100% + 2vmin);
     z-index: 11;
     width: var(--hud-width);
+    height: 100%;
     flex: none;
     display: flex;
     flex-direction: column;
@@ -124,7 +127,11 @@ html, body {
     }
 
     #hud {
+        position: relative;
+        top: auto;
+        right: auto;
         width: 100%;
+        height: auto;
         min-height: var(--hud-height);
         flex-direction: row;
         align-items: center;
@@ -201,6 +208,31 @@ html, body {
     color: #fff;
     font: bold 20px "Pixelify Sans", monospace;
     touch-action: manipulation;
+}
+
+/* Optional fullscreen toggle beside pause, available even on the title screen */
+#fullscreen-button {
+    display: none;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 3vmin);
+    right: calc(env(safe-area-inset-right, 0px) + 17vmin);
+    z-index: 12;
+    width: min(12vmin, 56px);
+    height: min(12vmin, 56px);
+    justify-content: center;
+    align-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font: bold clamp(10px, 2vmin, 14px) "Pixelify Sans", monospace;
+    touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+    #fullscreen-button.available {
+        display: flex;
+    }
 }
 
 /* D-pad on the left, sized relative to the smaller screen dimension */

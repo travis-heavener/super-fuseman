@@ -16,6 +16,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     const scores = document.getElementById("scores") as HTMLElement;
     const matchClock = document.getElementById("match-clock") as HTMLElement;
     const clockValue = document.getElementById("clock-value") as HTMLElement;
+    const fullscreenButton = document.getElementById("fullscreen-button") as HTMLButtonElement;
+
+    // Keep fullscreen optional and available before the match starts
+    if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+        fullscreenButton.classList.add("available");
+        fullscreenButton.addEventListener("click", async (e: MouseEvent) => {
+            e.stopPropagation(); // This tap must not start or resume a match
+
+            try {
+                if (document.fullscreenElement) await document.exitFullscreen();
+                else await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+            } catch {
+                // A browser may refuse fullscreen; the ordinary layout still works
+            }
+        });
+
+        // Android's back gesture can exit fullscreen without tapping this button
+        document.addEventListener("fullscreenchange", () => {
+            const isFullscreen = !!document.fullscreenElement;
+            fullscreenButton.textContent = isFullscreen ? "EXIT" : "FULL";
+            fullscreenButton.setAttribute("aria-label", isFullscreen ? "Exit fullscreen" : "Enter fullscreen");
+            fullscreenButton.setAttribute("aria-pressed", `${isFullscreen}`);
+        });
+    }
 
     // Build one score card per player using the same idle art as the game
     const wins = [0, 0, 0, 0, 0];

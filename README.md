@@ -19,7 +19,7 @@ As for why I'm doing this in web JavaScript, I really just wanted to do a throwb
 
 ## Controls
 
-Move with WASD and place a fuse with K. Press Escape to pause or resume. On touch devices, use the D-pad, PLANT button, and pause button.
+Move with WASD and place a fuse with K. Press Escape to pause or resume. On touch devices, use the D-pad, PLANT button, and pause button. Tap FULL to request fullscreen when available, and EXIT to leave it.
 
 Acquired upgrades and active temporary power-ups scatter on death. An animated shimmer marks affected players. If you die, the match continues until one player remains or everyone is out.
 
